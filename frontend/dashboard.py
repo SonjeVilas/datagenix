@@ -176,7 +176,18 @@ def main() -> None:
         st.markdown("---")
         # Warehouse status badge
         curr_state = st.session_state.get("current_project_state", {})
-        sf_connected = curr_state.get("snowflake_connected", False) or st.session_state.get("snowflake_connected", False)
+        if "snowflake_connected" in st.session_state:
+            sf_connected = bool(st.session_state["snowflake_connected"])
+        elif curr_state.get("snowflake_connected") is not None:
+            sf_connected = bool(curr_state.get("snowflake_connected"))
+        else:
+            try:
+                from config.settings import get_settings
+                sf_connected = get_settings().snowflake_configured
+            except Exception:
+                sf_connected = False
+            st.session_state["snowflake_connected"] = sf_connected
+
         if sf_connected:
             st.success("❄️ Snowflake: Connected", icon="✅")
         else:

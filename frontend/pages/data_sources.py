@@ -98,9 +98,14 @@ def _render_snowflake_tab() -> None:
                     )
                     if client.test_connection():
                         st.session_state.ds_connection_status = "connected"
+                        st.session_state["snowflake_connected"] = True
+                        curr_state = st.session_state.get("current_project_state", {})
+                        curr_state["snowflake_connected"] = True
+                        st.session_state["current_project_state"] = curr_state
                         st.success("✅ Successfully connected to Snowflake!", icon="❄️")
                     else:
                         st.session_state.ds_connection_status = "failed"
+                        st.session_state["snowflake_connected"] = False
                         st.error("Connection test failed.", icon="❌")
                 except Exception as e:
                     st.session_state.ds_connection_status = "failed"

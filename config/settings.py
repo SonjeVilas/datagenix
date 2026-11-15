@@ -69,13 +69,13 @@ class Settings(BaseSettings):
 
     @property
     def snowflake_configured(self) -> bool:
-        """Return True when all required Snowflake fields are set."""
-        return bool(
-            self.snowflake_account
-            and self.snowflake_user
-            and self.snowflake_password.get_secret_value()
-            and self.snowflake_database
+        """Return True when required Snowflake connection fields are set."""
+        pwd = (
+            self.snowflake_password.get_secret_value()
+            if hasattr(self.snowflake_password, "get_secret_value")
+            else str(self.snowflake_password)
         )
+        return bool(self.snowflake_account and self.snowflake_user and pwd)
 
     def configure_logging(self) -> None:
         """Apply the configured log level to the root logger."""

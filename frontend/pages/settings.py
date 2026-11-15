@@ -200,6 +200,23 @@ def render_settings_page() -> None:
 
     # Test buttons (outside form)
     st.markdown("### 🧪 Connection Tests")
+
+    test_feedback = st.session_state.pop("snowflake_test_feedback", None)
+    if test_feedback:
+        kind, msg = test_feedback
+        if kind == "success":
+            st.success(msg, icon="❄️")
+        else:
+            st.error(msg, icon="❌")
+
+    gemini_feedback = st.session_state.pop("gemini_test_feedback", None)
+    if gemini_feedback:
+        kind, msg = gemini_feedback
+        if kind == "success":
+            st.success(msg, icon="🤖")
+        else:
+            st.error(msg, icon="❌")
+
     col1, col2 = st.columns(2)
 
     with col1:
@@ -280,9 +297,14 @@ def _test_gemini_connection() -> None:
             try:
                 client = GeminiClient(api_key=api_key, model=model)
                 response = client.generate("Say 'Hello, dbt Project Factory!' in one sentence.", system_prompt="You are a helpful assistant.")
-                st.success(f"✅ Gemini connected successfully using model `{model}`!\n\n**Response:** {response[:200]}", icon="🤖")
+                st.session_state["gemini_test_feedback"] = (
+                    "success",
+                    f"✅ Gemini connected successfully using model `{model}`!\n\n**Response:** {response[:200]}",
+                )
+                st.rerun()
             except Exception as e:
-                st.error(f"❌ Gemini connection failed: {e}", icon="❌")
+                st.session_state["gemini_test_feedback"] = ("error", f"❌ Gemini connection failed: {e}")
+                st.rerun()
     else:
         st.warning("GeminiClient not available. Check backend installation.", icon="⚠️")
 
@@ -330,11 +352,24 @@ def _test_snowflake_connection() -> None:
                 )
                 if client.test_connection():
                     st.session_state["snowflake_connected"] = True
-                    st.success("✅ Snowflake connection successful!", icon="❄️")
+                    curr_state = st.session_state.get("current_project_state", {})
+                    curr_state["snowflake_connected"] = True
+                    st.session_state["current_project_state"] = curr_state
+                    st.session_state["snowflake_test_feedback"] = ("success", "✅ Snowflake connection successful!")
+                    st.rerun()
                 else:
                     st.session_state["snowflake_connected"] = False
-                    st.error("❌ Snowflake connection test returned False.", icon="❌")
+                    curr_state = st.session_state.get("current_project_state", {})
+                    curr_state["snowflake_connected"] = False
+                    st.session_state["current_project_state"] = curr_state
+                    st.session_state["snowflake_test_feedback"] = ("error", "❌ Snowflake connection test returned False.")
+                    st.rerun()
             except Exception as e:
-                st.error(f"❌ Snowflake connection failed: {e}", icon="❌")
+                st.session_state["snowflake_connected"] = False
+                curr_state = st.session_state.get("current_project_state", {})
+                curr_state["snowflake_connected"] = False
+                st.session_state["current_project_state"] = curr_state
+                st.session_state["snowflake_test_feedback"] = ("error", f"❌ Snowflake connection failed: {e}")
+                st.rerun()
     else:
         st.warning("SnowflakeClient not available. Install snowflake-connector-python.", icon="⚠️")
