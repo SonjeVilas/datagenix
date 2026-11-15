@@ -1,0 +1,52 @@
+# ── Python ──────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# ── Virtual environments ───────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Environment / secrets ──────────────────────────────────────────────
+.env
+.env.local
+.env.production
+
+# ── Generated output ───────────────────────────────────────────────────
+generated_projects/*
+!generated_projects/.gitkeep
+storage/*
+!storage/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# ── IDE / editor ───────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Testing / coverage ────────────────────────────────────────────────
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ── Misc ───────────────────────────────────────────────────────────────
+*.log
+*.bak
+*.tmp

@@ -1,0 +1,336 @@
+/* ==========================================================================
+   dbt Project Factory — Custom Dashboard Theme
+   Professional dark-themed data engineering dashboard
+   ========================================================================== */
+
+/* ---------- Root Variables ---------- */
+:root {
+    --bg-primary: #0e1117;
+    --bg-secondary: #1a1f2e;
+    --bg-card: #1e2436;
+    --bg-card-hover: #252d42;
+    --bg-input: #151926;
+    --border-color: #2d3548;
+    --border-accent: #3b82f6;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent-blue: #3b82f6;
+    --accent-green: #22c55e;
+    --accent-red: #ef4444;
+    --accent-yellow: #eab308;
+    --accent-purple: #8b5cf6;
+    --accent-orange: #f97316;
+    --accent-cyan: #06b6d4;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --transition: all 0.2s ease;
+}
+
+/* ---------- Global Layout ---------- */
+.main .block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    max-width: 1400px;
+}
+
+/* ---------- Metric Cards ---------- */
+.metric-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1.25rem 1.5rem;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+.metric-card:hover {
+    border-color: var(--border-accent);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+.metric-card .metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+.metric-card .metric-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.25rem;
+}
+
+/* ---------- Agent Status Cards ---------- */
+.agent-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    margin-bottom: 0.75rem;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+.agent-card:hover {
+    border-color: var(--border-accent);
+    box-shadow: var(--shadow-md);
+}
+.agent-card .agent-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+.agent-card .agent-description {
+    font-size: 0.825rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+}
+.agent-card .agent-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* ---------- Status Badges ---------- */
+.status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.status-waiting {
+    background: rgba(100, 116, 139, 0.2);
+    color: #94a3b8;
+    border: 1px solid rgba(100, 116, 139, 0.3);
+}
+.status-running {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    animation: pulse-running 2s infinite;
+}
+.status-completed {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+.status-failed {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.status-approval {
+    background: rgba(234, 179, 8, 0.15);
+    color: #facc15;
+    border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+@keyframes pulse-running {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* ---------- Code Viewer ---------- */
+.code-container {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+.code-container .code-header {
+    background: var(--bg-secondary);
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.code-container .code-header .file-name {
+    font-size: 0.825rem;
+    font-weight: 500;
+    color: var(--accent-cyan);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+.code-container .code-header .file-type {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+/* ---------- Project Tree ---------- */
+.tree-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+}
+.tree-item {
+    padding: 0.35rem 0.5rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+.tree-item:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+}
+.tree-item.active {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--accent-blue);
+    border-left: 2px solid var(--accent-blue);
+}
+.tree-folder {
+    color: var(--accent-yellow);
+    font-weight: 500;
+}
+.tree-file-sql {
+    color: var(--accent-cyan);
+}
+.tree-file-yml {
+    color: var(--accent-green);
+}
+.tree-file-md {
+    color: var(--text-secondary);
+}
+
+/* ---------- Workflow Visualization ---------- */
+.workflow-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+}
+
+/* ---------- Section Headers ---------- */
+.section-header {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* ---------- Data Table Styling ---------- */
+.dataframe-container {
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+/* ---------- Sidebar ---------- */
+section[data-testid="stSidebar"] {
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+}
+section[data-testid="stSidebar"] .stRadio label {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+    font-size: 0.9rem;
+}
+section[data-testid="stSidebar"] .stRadio label:hover {
+    background: var(--bg-card-hover);
+}
+
+/* ---------- Buttons ---------- */
+.stButton > button {
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+    transition: var(--transition);
+    border: 1px solid var(--border-color);
+}
+.stButton > button:hover {
+    border-color: var(--border-accent);
+    box-shadow: var(--shadow-sm);
+}
+.stButton > button[kind="primary"] {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+}
+
+/* ---------- Tabs ---------- */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.stTabs [data-baseweb="tab"] {
+    padding: 0.75rem 1.25rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    transition: var(--transition);
+}
+.stTabs [data-baseweb="tab"]:hover {
+    color: var(--text-primary);
+}
+.stTabs [aria-selected="true"] {
+    color: var(--accent-blue) !important;
+    border-bottom-color: var(--accent-blue) !important;
+}
+
+/* ---------- Forms & Inputs ---------- */
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea,
+.stSelectbox > div > div {
+    border-color: var(--border-color);
+    border-radius: var(--radius-sm);
+}
+.stTextInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {
+    border-color: var(--border-accent);
+    box-shadow: 0 0 0 1px var(--border-accent);
+}
+
+/* ---------- Expander ---------- */
+.streamlit-expanderHeader {
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+}
+
+/* ---------- Progress Bar ---------- */
+.stProgress > div > div > div {
+    background: var(--accent-blue);
+    border-radius: 9999px;
+}
+
+/* ---------- Divider ---------- */
+hr {
+    border-color: var(--border-color);
+    opacity: 0.5;
+}
+
+/* ---------- Chat Message Styling ---------- */
+.stChatMessage {
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    margin-bottom: 0.5rem;
+}
+
+/* ---------- File Uploader ---------- */
+.stFileUploader {
+    border-radius: var(--radius-md);
+    border: 1px dashed var(--border-color);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+    .main .block-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    .metric-card .metric-value {
+        font-size: 1.5rem;
+    }
+}
