@@ -227,7 +227,8 @@ class DbtRunner:
         """Run ``dbt parse``."""
         pkg_file = self.project_dir / "packages.yml"
         pkg_tmp = self.project_dir / "packages.yml.tmp"
-        has_installed = (self.project_dir / "dbt_packages").exists()
+        dbt_pkgs = self.project_dir / "dbt_packages"
+        has_installed = any(dbt_pkgs.iterdir()) if dbt_pkgs.exists() else False
         renamed = False
         if pkg_file.exists() and not has_installed:
             try:
@@ -248,7 +249,8 @@ class DbtRunner:
         """Run ``dbt compile``."""
         pkg_file = self.project_dir / "packages.yml"
         pkg_tmp = self.project_dir / "packages.yml.tmp"
-        has_installed = (self.project_dir / "dbt_packages").exists()
+        dbt_pkgs = self.project_dir / "dbt_packages"
+        has_installed = any(dbt_pkgs.iterdir()) if dbt_pkgs.exists() else False
         renamed = False
         if pkg_file.exists() and not has_installed:
             try:
