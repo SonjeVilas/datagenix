@@ -217,23 +217,45 @@ class Validator:
     # Subprocess / CLI Execution Checks (requires built project)
     # ----------------------------------------------------------------------
 
+    def _cmd_to_dict(self, res: Any) -> Dict[str, Any]:
+        """Convert a CommandResult or dict into a standard validation dict."""
+        if isinstance(res, dict):
+            return res
+        if hasattr(res, "to_dict"):
+            return res.to_dict()
+        passed = getattr(res, "success", False)
+        stdout = getattr(res, "stdout", "") or ""
+        stderr = getattr(res, "stderr", "") or ""
+        errors = []
+        if not passed:
+            err_msg = stderr.strip() or stdout.strip() or "Command failed"
+            errors.append({"file": "project", "line": 1, "message": err_msg})
+        return {
+            "passed": passed,
+            "errors": errors,
+            "warnings": [],
+            "output": stdout,
+            "error": stderr,
+            "raw_output": f"{stdout}\n{stderr}".strip(),
+        }
+
     def run_dbt_parse(self) -> Dict[str, Any]:
         """Execute `dbt parse` in project directory."""
         if not self.dbt_runner:
-            return {"passed": False, "error": "No project directory configured"}
-        return self.dbt_runner.parse()
+            return {"passed": False, "errors": ["No project directory configured"], "raw_output": ""}
+        return self._cmd_to_dict(self.dbt_runner.parse())
 
     def run_dbt_compile(self) -> Dict[str, Any]:
         """Execute `dbt compile` in project directory."""
         if not self.dbt_runner:
-            return {"passed": False, "error": "No project directory configured"}
-        return self.dbt_runner.compile()
+            return {"passed": False, "errors": ["No project directory configured"], "raw_output": ""}
+        return self._cmd_to_dict(self.dbt_runner.compile())
 
     def run_sqlfluff_lint(self) -> Dict[str, Any]:
         """Execute `sqlfluff lint` on models directory."""
         if not self.dbt_runner:
-            return {"passed": False, "error": "No project directory configured"}
-        return self.dbt_runner.sqlfluff_lint()
+            return {"passed": False, "errors": ["No project directory configured"], "raw_output": ""}
+        return self._cmd_to_dict(self.dbt_runner.sqlfluff_lint())
 
     # ----------------------------------------------------------------------
     # Aggregated Validation Runner

@@ -78,3 +78,23 @@ def test_validator_validate_all():
     assert "qa_report" in state
     assert state["qa_report"]["passed"] is True
 
+
+def test_validator_validate_all_with_dbt_runner(tmp_path):
+    # Create sample models on disk
+    models_dir = tmp_path / "models"
+    models_dir.mkdir()
+    (models_dir / "test.sql").write_text("select 1", encoding="utf-8")
+    (models_dir / "schema.yml").write_text("version: 2\n", encoding="utf-8")
+
+    state = {
+        "project_output_path": str(tmp_path),
+        "generated_models": {},
+        "generated_yaml": {},
+    }
+    validator = Validator()
+    res = validator.validate_all(state)
+    assert "QA Agent" in res
+    assert "dbt_parse" in res
+    assert isinstance(res["dbt_parse"], dict)
+    assert "passed" in res["dbt_parse"]
+

@@ -27,6 +27,50 @@ class CommandResult:
     def __post_init__(self) -> None:
         self.success = self.return_code == 0 and not self.timed_out
 
+    def get(self, key: str, default: Any = None) -> Any:
+        """Dictionary-like accessor for compatibility."""
+        if key in ("passed", "valid"):
+            return self.success
+        if key in ("output", "stdout"):
+            return self.stdout
+        if key in ("error", "stderr"):
+            return self.stderr
+        if key == "errors":
+            if not self.success:
+                msg = (self.stderr.strip() or self.stdout.strip())
+                return [{"file": "project", "line": 1, "message": msg}] if msg else []
+            return []
+        if key == "warnings":
+            return []
+        if key == "raw_output":
+            return f"{self.stdout}\n{self.stderr}".strip()
+        return getattr(self, key, default)
+
+    def __getitem__(self, key: str) -> Any:
+        val = self.get(key)
+        if val is None and not hasattr(self, key):
+            raise KeyError(key)
+        return val
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert result into standard dictionary."""
+        return {
+            "command": self.command,
+            "return_code": self.return_code,
+            "stdout": self.stdout,
+            "stderr": self.stderr,
+            "timed_out": self.timed_out,
+            "success": self.success,
+            "passed": self.success,
+            "errors": [
+                {"file": "project", "line": 1, "message": self.stderr.strip() or self.stdout.strip()}
+            ] if not self.success else [],
+            "warnings": [],
+            "output": self.stdout,
+            "error": self.stderr,
+            "raw_output": f"{self.stdout}\n{self.stderr}".strip(),
+        }
+
 
 class DbtRunner:
     """Safe subprocess wrapper for dbt and sqlfluff commands.
