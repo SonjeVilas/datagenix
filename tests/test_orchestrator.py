@@ -44,7 +44,8 @@ def test_orchestrator_run_mocked(tmp_path, mock_state):
 
         agent.execute = MagicMock(side_effect=mock_exec)
 
-    final_state = orch.run(mock_state)
+    with patch("time.sleep", return_value=None):
+        final_state = orch.run(mock_state)
     assert final_state is not None
     assert "agent_status" in final_state
     assert final_state["agent_status"]["requirement_analyst"]["status"] == "completed"
@@ -52,3 +53,42 @@ def test_orchestrator_run_mocked(tmp_path, mock_state):
         final_state["agent_status"].get("packaging", {}).get("status") == "completed"
         or final_state["agent_status"].get("project_packaging", {}).get("status") == "completed"
     )
+
+
+def test_orchestrator_max_retries_termination(tmp_path, mock_state):
+    """Verify that when QA validation repeatedly fails, the fixer terminates at max_retries."""
+    db = Database(tmp_path / "test.db")
+    orch = Orchestrator(db=db)
+
+    for agent in [
+        orch.requirement_agent,
+        orch.discovery_agent,
+        orch.architect_agent,
+        orch.business_logic_agent,
+        orch.sql_agent,
+        orch.yaml_agent,
+        orch.data_quality_agent,
+        orch.documentation_agent,
+        orch.fixer_agent,
+        orch.packaging_agent,
+    ]:
+        def mock_exec(st, a=agent):
+            st.setdefault("agent_status", {})[a.name] = {"status": "completed", "message": "OK"}
+            return st
+        agent.execute = MagicMock(side_effect=mock_exec)
+
+    # QA agent always returns errors to trigger fixer loop
+    orch.qa_agent.execute = MagicMock(side_effect=lambda st: {
+        **st,
+        "qa_report": {
+            "status": "failed",
+            "issues": [{"severity": "error", "message": "Persistent syntax error"}],
+        },
+    })
+
+    with patch("time.sleep", return_value=None):
+        final_state = orch.run(mock_state)
+
+    assert final_state is not None
+    # Fixer should have executed up to max_retries (3) and terminated at packaging
+    assert final_state.get("retry_count", 0) >= 3

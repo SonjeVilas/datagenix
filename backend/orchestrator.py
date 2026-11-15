@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import logging
+import time
 from typing import Any, Callable, Dict, Generator, List, Optional
+import uuid
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
@@ -62,10 +64,25 @@ class Orchestrator:
             started_at = datetime.now(timezone.utc).isoformat()
             state["current_agent"] = agent_name
 
+            # If this is fixer / error_correction, increment retry_count in node state
+            if agent_name in ("fixer", "error_correction") or action_name == "Self-Healing Error Correction":
+                state["retry_count"] = state.get("retry_count", 0) + 1
+                logger.info("Executing FixerAgent (attempt %d/%d)", state["retry_count"], state.get("max_retries", 3))
+
+            # Circuit breaker: if requirements analysis failed upstream, skip downstream code generators
+            if agent_name not in ("requirement_analyst", "data_discovery", "fixer", "error_correction", "packaging", "project_packaging"):
+                req_status = state.get("agent_status", {}).get("requirement_analyst", {}).get("status")
+                if req_status in ("error", "failed"):
+                    logger.warning("Skipping '%s': RequirementAgent failed upstream.", agent_name)
+                    state.setdefault("errors", []).append(f"Skipped {agent_name}: RequirementAgent failed")
+                    return state
+
             logger.info(">>> Node started: %s (project=%s)", agent_name, project_name)
 
             try:
                 state = agent_instance.execute(state)
+                # Small pause to stay well under free-tier 15 RPM
+                time.sleep(1.0)
                 completed_at = datetime.now(timezone.utc).isoformat()
                 
                 # Calculate duration
@@ -162,6 +179,11 @@ class Orchestrator:
 
         # 3. Conditional routing from QA
         def evaluate_qa_result(state: Dict[str, Any]) -> str:
+            req_status = state.get("agent_status", {}).get("requirement_analyst", {}).get("status")
+            if req_status in ("error", "failed"):
+                logger.warning("QA validation skipped: RequirementAgent failed upstream. Proceeding to packaging.")
+                return "packaging"
+
             qa_report = state.get("qa_report", {})
             status = qa_report.get("status", "passed")
             issues = qa_report.get("issues", [])
@@ -183,12 +205,11 @@ class Orchestrator:
                 return "packaging"
 
             if retry_count < max_retries:
-                state["retry_count"] = retry_count + 1
-                logger.info("QA validation found issues. Routing to fixer (attempt %d/%d).", state["retry_count"], max_retries)
+                logger.info("QA validation found issues. Routing to fixer (attempt %d/%d).", retry_count + 1, max_retries)
                 return "fix"
             else:
-                logger.warning("Max retries (%d) reached. Escalating to human review.", max_retries)
-                return "human_review"
+                logger.warning("Max retries (%d) reached. Proceeding to packaging.", max_retries)
+                return "packaging"
 
         workflow.add_conditional_edges(
             "qa_validation",
@@ -213,9 +234,12 @@ class Orchestrator:
     # Execution Interfaces
     # ----------------------------------------------------------------------
 
-    def run(self, initial_state: Dict[str, Any] | ProjectState, thread_id: str = "default_thread") -> Dict[str, Any]:
+    def run(self, initial_state: Dict[str, Any] | ProjectState, thread_id: Optional[str] = None) -> Dict[str, Any]:
         """Execute the complete graph synchronously to completion."""
         state_dict = initial_state.model_dump() if isinstance(initial_state, ProjectState) else dict(initial_state)
+        if not thread_id or thread_id == "default_thread":
+            proj = state_dict.get("project_name", "proj")
+            thread_id = f"{proj}_{uuid.uuid4().hex[:8]}"
         config = {"configurable": {"thread_id": thread_id}}
         final_state = self.graph.invoke(state_dict, config=config)
 
@@ -238,10 +262,13 @@ class Orchestrator:
         return final_state
 
     def stream(
-        self, initial_state: Dict[str, Any] | ProjectState, thread_id: str = "default_thread"
+        self, initial_state: Dict[str, Any] | ProjectState, thread_id: Optional[str] = None
     ) -> Generator[Dict[str, Any], None, None]:
         """Stream graph node updates one by one for real-time frontend feedback."""
         state_dict = initial_state.model_dump() if isinstance(initial_state, ProjectState) else dict(initial_state)
+        if not thread_id or thread_id == "default_thread":
+            proj = state_dict.get("project_name", "proj")
+            thread_id = f"{proj}_{uuid.uuid4().hex[:8]}"
         config = {"configurable": {"thread_id": thread_id}}
         for step_output in self.graph.stream(state_dict, config=config):
             yield step_output

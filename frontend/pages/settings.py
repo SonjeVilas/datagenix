@@ -29,7 +29,7 @@ def _load_settings() -> dict[str, Any]:
     """Load current settings."""
     defaults = {
         "gemini_api_key": "",
-        "gemini_model": "gemini-3.5-flash",
+        "gemini_model": "gemini-3.5-flash-lite",
         "snowflake_account": "",
         "snowflake_user": "",
         "snowflake_password": "",
@@ -290,7 +290,7 @@ def _test_gemini_connection() -> None:
             from config.settings import get_settings
             model = get_settings().gemini_model
         except Exception:
-            model = "gemini-3.5-flash"
+            model = "gemini-3.5-flash-lite"
 
     if GeminiClient is not None:
         with st.spinner(f"Testing Gemini connection with model '{model}'..."):
