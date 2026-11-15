@@ -139,27 +139,36 @@ def _render_text_pipeline(agent_statuses: dict[str, str]) -> None:
     st.markdown(" → ".join(parts))
 
 
-def render_progress_bar(agent_statuses: dict[str, str]) -> None:
+def render_progress_bar(agent_statuses: Any) -> None:
     """Render an overall progress bar based on agent statuses.
 
     Args:
-        agent_statuses: Dict mapping agent_id → status string.
+        agent_statuses: Dict mapping agent_id → status string or list of dicts.
     """
+    status_map: dict[str, str] = {}
+    if isinstance(agent_statuses, list):
+        for item in agent_statuses:
+            if isinstance(item, dict) and "id" in item:
+                status_map[item["id"]] = item.get("status", "waiting")
+    elif isinstance(agent_statuses, dict):
+        for k, v in agent_statuses.items():
+            status_map[k] = v.get("status", "waiting") if isinstance(v, dict) else str(v)
+
     total = len(AGENT_PIPELINE)
     completed = sum(
         1
         for a in AGENT_PIPELINE
-        if agent_statuses.get(a["id"]) == "completed"
+        if status_map.get(a["id"]) == "completed"
     )
     running = sum(
         1
         for a in AGENT_PIPELINE
-        if agent_statuses.get(a["id"]) == "running"
+        if status_map.get(a["id"]) == "running"
     )
     failed = sum(
         1
         for a in AGENT_PIPELINE
-        if agent_statuses.get(a["id"]) in ("failed", "error")
+        if status_map.get(a["id"]) in ("failed", "error")
     )
 
     progress = completed / total if total > 0 else 0.0

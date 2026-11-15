@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -132,6 +133,7 @@ class FixerAgent(BaseAgent):
 
                 # Ask Gemini for the fix
                 corrected = self._fix_file(file_path, original, file_issues)
+                time.sleep(1.2)  # Throttle to stay within free-tier 15 RPM
                 if corrected is None:
                     corrections.append(
                         {

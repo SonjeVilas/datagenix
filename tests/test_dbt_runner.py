@@ -17,11 +17,11 @@ def test_dbt_runner_parse_invokes_subprocess(tmp_path):
         assert result.success
         assert result.return_code == 0
         assert "Parsed 3 models." in result.stdout
-        # Ensure shell=False (list of args passed)
+        # Ensure shell=False (list of args passed with subcommand first)
         args, kwargs = mock_sub.call_args
         assert isinstance(args[0], list)
-        assert args[0][0] == "dbt"
-        assert "parse" in args[0]
+        assert args[0][:2] == ["dbt", "parse"]
+        assert "--project-dir" in args[0]
 
 
 def test_dbt_runner_timeout_handling(tmp_path):

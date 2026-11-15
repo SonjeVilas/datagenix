@@ -77,11 +77,13 @@ def render_dashboard_home(db: Database) -> None:
     if proj_name:
         st.markdown(f"### 📍 Active Workspace: **{proj_name}**")
         agent_statuses = current_state.get("agent_status", {})
-        agents_data = [
-            {"id": a["id"], "name": a["name"], "status": agent_statuses.get(a["id"], {}).get("status", "waiting")}
+        status_map = {
+            a["id"]: agent_statuses.get(a["id"], {}).get("status", "waiting")
+            if isinstance(agent_statuses.get(a["id"]), dict)
+            else str(agent_statuses.get(a["id"], "waiting"))
             for a in AGENT_PIPELINE
-        ]
-        render_progress_bar(agents_data)
+        }
+        render_progress_bar(status_map)
         st.markdown("---")
 
     # 3. Two-column Layout: Recent Projects & Quick Actions

@@ -58,6 +58,11 @@ class AggregationRule(BaseModel):
         if isinstance(data, dict):
             data["name"] = str(data.get("name") or data.get("agg_name") or "agg")
             data["source_model"] = str(data.get("source_model") or data.get("model") or data.get("table") or "")
+            f = data.get("filters")
+            if isinstance(f, list):
+                data["filters"] = " AND ".join(str(x) for x in f) if f else ""
+            elif f is not None:
+                data["filters"] = str(f)
         return data
 
 
@@ -108,6 +113,11 @@ class DeduplicationRule(BaseModel):
         if isinstance(data, dict):
             data["name"] = str(data.get("name") or data.get("dedup_name") or "dedup")
             data["source_model"] = str(data.get("source_model") or data.get("model") or data.get("table") or "")
+            ob = data.get("order_by")
+            if isinstance(ob, list):
+                data["order_by"] = ", ".join(str(x) for x in ob)
+            elif ob is not None:
+                data["order_by"] = str(ob)
         return data
 
 
@@ -127,6 +137,9 @@ class NullHandlingRule(BaseModel):
         if isinstance(data, dict):
             data["column"] = str(data.get("column") or data.get("name") or "")
             data["source_model"] = str(data.get("source_model") or data.get("model") or "")
+            dv = data.get("default_value")
+            if dv is not None:
+                data["default_value"] = str(dv)
         return data
 
 

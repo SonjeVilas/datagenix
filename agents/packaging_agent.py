@@ -77,10 +77,12 @@ class PackagingAgent(BaseAgent):
 
         try:
             project_name: str = state.get("project_name", "dbt_project")
-            output_base: str = state.get(
-                "project_output_path", "generated_projects"
-            )
-            project_dir = os.path.join(output_base, project_name)
+            existing_path: str = state.get("project_output_path", "")
+            if existing_path and os.path.basename(os.path.normpath(existing_path)) == project_name:
+                project_dir = existing_path
+            else:
+                output_base: str = "generated_projects"
+                project_dir = os.path.join(output_base, project_name)
 
             # Initialise FileManager
             self.file_manager = FileManager(base_dir=project_dir)
@@ -129,7 +131,8 @@ class PackagingAgent(BaseAgent):
                     written_files.append(rel_path)
 
             # ---- Create ZIP archive ----
-            zip_path = os.path.join(output_base, f"{project_name}.zip")
+            zip_dir = os.path.dirname(os.path.normpath(project_dir)) or "generated_projects"
+            zip_path = os.path.join(zip_dir, f"{project_name}.zip")
             self._create_zip(project_dir, zip_path, written_files, artefacts, readme_content, requirements_content)
 
             # ---- Build manifest ----

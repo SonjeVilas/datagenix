@@ -144,30 +144,32 @@ class DbtRunner:
             )
         return result
 
-    def _dbt_base_args(self) -> List[str]:
-        """Return common dbt CLI flags."""
-        args = ["dbt", "--project-dir", str(self.project_dir)]
+    def _dbt_cmd(self, subcommand: str, extra_args: Optional[List[str]] = None) -> List[str]:
+        """Return dbt CLI arguments with subcommand placed first."""
+        args = ["dbt", subcommand, "--project-dir", str(self.project_dir)]
         if self.profiles_dir:
             args.extend(["--profiles-dir", str(self.profiles_dir)])
+        if extra_args:
+            args.extend(extra_args)
         return args
 
     # ── dbt commands ────────────────────────────────────────────────────
 
     def debug(self, timeout: int = DEFAULT_TIMEOUT) -> CommandResult:
         """Run ``dbt debug``."""
-        return self._run(self._dbt_base_args() + ["debug"], timeout=timeout)
+        return self._run(self._dbt_cmd("debug"), timeout=timeout)
 
     def deps(self, timeout: int = DEFAULT_TIMEOUT) -> CommandResult:
         """Run ``dbt deps``."""
-        return self._run(self._dbt_base_args() + ["deps"], timeout=timeout)
+        return self._run(self._dbt_cmd("deps"), timeout=timeout)
 
     def parse(self, timeout: int = DEFAULT_TIMEOUT) -> CommandResult:
         """Run ``dbt parse``."""
-        return self._run(self._dbt_base_args() + ["parse"], timeout=timeout)
+        return self._run(self._dbt_cmd("parse"), timeout=timeout)
 
     def compile(self, timeout: int = DEFAULT_TIMEOUT) -> CommandResult:
         """Run ``dbt compile``."""
-        return self._run(self._dbt_base_args() + ["compile"], timeout=timeout)
+        return self._run(self._dbt_cmd("compile"), timeout=timeout)
 
     def test(
         self,
@@ -175,10 +177,8 @@ class DbtRunner:
         timeout: int = DEFAULT_TIMEOUT,
     ) -> CommandResult:
         """Run ``dbt test``."""
-        args = self._dbt_base_args() + ["test"]
-        if select:
-            args.extend(["--select", select])
-        return self._run(args, timeout=timeout)
+        extra = ["--select", select] if select else []
+        return self._run(self._dbt_cmd("test", extra), timeout=timeout)
 
     def build(
         self,
@@ -187,12 +187,12 @@ class DbtRunner:
         timeout: int = DEFAULT_TIMEOUT,
     ) -> CommandResult:
         """Run ``dbt build``."""
-        args = self._dbt_base_args() + ["build"]
+        extra = []
         if select:
-            args.extend(["--select", select])
+            extra.extend(["--select", select])
         if full_refresh:
-            args.append("--full-refresh")
-        return self._run(args, timeout=timeout)
+            extra.append("--full-refresh")
+        return self._run(self._dbt_cmd("build", extra), timeout=timeout)
 
     def run(
         self,
@@ -201,16 +201,16 @@ class DbtRunner:
         timeout: int = DEFAULT_TIMEOUT,
     ) -> CommandResult:
         """Run ``dbt run``."""
-        args = self._dbt_base_args() + ["run"]
+        extra = []
         if select:
-            args.extend(["--select", select])
+            extra.extend(["--select", select])
         if full_refresh:
-            args.append("--full-refresh")
-        return self._run(args, timeout=timeout)
+            extra.append("--full-refresh")
+        return self._run(self._dbt_cmd("run", extra), timeout=timeout)
 
     def docs_generate(self, timeout: int = DEFAULT_TIMEOUT) -> CommandResult:
         """Run ``dbt docs generate``."""
-        return self._run(self._dbt_base_args() + ["docs", "generate"], timeout=timeout)
+        return self._run(self._dbt_cmd("docs", ["generate"]), timeout=timeout)
 
     # ── sqlfluff commands ───────────────────────────────────────────────
 

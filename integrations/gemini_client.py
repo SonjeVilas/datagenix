@@ -26,6 +26,24 @@ logger = logging.getLogger(__name__)
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*\n?(.*?)\n?\s*```", re.DOTALL)
 
 
+def _gemini_wait(retry_state: Any) -> float:
+    """Smart backoff that respects Gemini 429 retry-after recommendations."""
+    exc = retry_state.outcome.exception() if retry_state.outcome else None
+    if exc:
+        msg = str(exc)
+        match = re.search(r"retry in (\d+(?:\.\d+)?)s", msg, re.IGNORECASE)
+        if not match:
+            match = re.search(r"retryDelay': '(\d+)s", msg)
+        if match:
+            delay = float(match.group(1)) + 1.5
+            logger.info("Rate limit hit: backing off for %.1fs as specified by API", delay)
+            return max(1.0, min(delay, 60.0))
+        if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
+            logger.info("Rate limit 429 hit: backing off for 15s")
+            return 15.0
+    return min(1.5 ** retry_state.attempt_number * 2.0, 30.0)
+
+
 def _mask_secret(value: str, visible: int = 4) -> str:
     """Return a masked version of *value* safe for logging."""
     if len(value) <= visible:
@@ -108,8 +126,8 @@ class GeminiClient:
 
     @retry(
         retry=retry_if_exception_type((Exception,)),
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1.5, min=1, max=10),
+        stop=stop_after_attempt(5),
+        wait=_gemini_wait,
         reraise=True,
         before_sleep=lambda rs: logger.warning(
             "Gemini call retry #%s after %s",
