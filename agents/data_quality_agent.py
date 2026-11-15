@@ -169,14 +169,13 @@ class DataQualityAgent(BaseAgent):
 
         sections.append(
             "Rules for generating tests:\n"
-            "1. Every PK column → unique + not_null.\n"
-            "2. Every FK column → relationships test.\n"
-            "3. Status/type/category → accepted_values.\n"
-            "4. Timestamp/date columns → not_null; fact dates → dbt_utils.recency.\n"
-            "5. Composite keys → dbt_utils.unique_combination_of_columns.\n"
-            "6. Business constraints on numerics → dbt_utils.expression_is_true.\n"
-            "7. Do NOT add irrelevant tests.\n"
-            "8. Output JSON: keys are relative paths, values are full YAML strings.\n"
+            "1. Every PK column → unique + not_null (standard dbt tests).\n"
+            "2. Every FK column → relationships test (standard dbt test).\n"
+            "3. Status/type/category → accepted_values (standard dbt test).\n"
+            "4. Timestamp/date columns → not_null.\n"
+            "5. Prefer standard native dbt tests (unique, not_null, accepted_values, relationships) so the project compiles cleanly out-of-the-box.\n"
+            "6. Do NOT add irrelevant tests.\n"
+            "7. Output JSON: keys are relative paths, values are full YAML strings.\n"
         )
 
         return "\n".join(sections)

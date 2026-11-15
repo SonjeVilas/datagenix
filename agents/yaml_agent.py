@@ -122,7 +122,7 @@ class YAMLDeveloperAgent(BaseAgent):
                 f"{json.dumps(architecture.get('layers', []), indent=2)}\n\n"
                 "Materialization strategy:\n"
                 f"{json.dumps(architecture.get('materialization_strategy', {}), indent=2)}\n\n"
-                "2. **packages.yml** with dbt_utils and any other packages needed.\n\n"
+                "2. **packages.yml** with dbt-labs/dbt_utils (version must be valid semver like '>=1.1.0' or 1.1.1).\n\n"
                 "3. **profiles.yml.example** for Snowflake with dev and prod targets "
                 "using env_var() for credentials.\n\n"
                 "Return a JSON object with key: files (list of "
