@@ -9,9 +9,9 @@ transformation rules, and data quality requirements.
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from agents.base_agent import BaseAgent
 
@@ -23,34 +23,68 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 class TransformationRequirement(BaseModel):
-    name: str = Field(..., description="Name of the transformation")
-    description: str = Field(..., description="What the transformation does")
+    name: str = Field(default="", description="Name of the transformation")
+    description: Optional[str] = Field(default="", description="What the transformation does")
     source_entities: list[str] = Field(default_factory=list, description="Source entities involved")
-    logic: str = Field(default="", description="High-level transformation logic")
-    priority: str = Field(default="medium", description="Priority: high, medium, low")
+    logic: Optional[str] = Field(default="", description="High-level transformation logic")
+    priority: Optional[str] = Field(default="medium", description="Priority: high, medium, low")
+
+    @field_validator("name", "description", "logic", "priority", mode="before")
+    @classmethod
+    def _coerce_str(cls, v: Any) -> str:
+        return str(v) if v is not None else ""
+
+    @field_validator("source_entities", mode="before")
+    @classmethod
+    def _coerce_list(cls, v: Any) -> list[str]:
+        if isinstance(v, list):
+            return [str(x) for x in v if x is not None]
+        return []
 
 
 class OutputModel(BaseModel):
-    name: str = Field(..., description="Name of the output model/table")
-    description: str = Field(default="", description="Purpose of the output model")
-    grain: str = Field(default="", description="Grain / primary key description")
+    name: str = Field(default="", description="Name of the output model/table")
+    description: Optional[str] = Field(default="", description="Purpose of the output model")
+    grain: Optional[str] = Field(default="", description="Grain / primary key description")
     key_columns: list[str] = Field(default_factory=list, description="Key columns in the output")
     consumers: list[str] = Field(default_factory=list, description="Downstream consumers")
 
+    @field_validator("name", "description", "grain", mode="before")
+    @classmethod
+    def _coerce_str(cls, v: Any) -> str:
+        return str(v) if v is not None else ""
+
+    @field_validator("key_columns", "consumers", mode="before")
+    @classmethod
+    def _coerce_list(cls, v: Any) -> list[str]:
+        if isinstance(v, list):
+            return [str(x) for x in v if x is not None]
+        return []
+
 
 class IncrementalRequirement(BaseModel):
-    entity: str = Field(..., description="Entity name requiring incremental load")
-    strategy: str = Field(default="timestamp", description="Incremental strategy")
-    timestamp_column: str = Field(default="", description="Column used for incremental detection")
-    unique_key: str = Field(default="", description="Unique key for merge")
+    entity: str = Field(default="", description="Entity name requiring incremental load")
+    strategy: Optional[str] = Field(default="timestamp", description="Incremental strategy")
+    timestamp_column: Optional[str] = Field(default="", description="Column used for incremental detection")
+    unique_key: Optional[str] = Field(default="", description="Unique key for merge")
+
+    @field_validator("entity", "strategy", "timestamp_column", "unique_key", mode="before")
+    @classmethod
+    def _coerce_str(cls, v: Any) -> str:
+        return str(v) if v is not None else ""
 
 
 class DataQualityRequirement(BaseModel):
-    entity: str = Field(..., description="Entity the rule applies to")
-    rule_type: str = Field(..., description="Type: not_null, unique, accepted_values, relationships, custom")
-    column: str = Field(default="", description="Column the rule applies to")
-    description: str = Field(default="", description="Description of the quality rule")
-    severity: str = Field(default="warn", description="warn or error")
+    entity: str = Field(default="", description="Entity the rule applies to")
+    rule_type: str = Field(default="not_null", description="Type: not_null, unique, accepted_values, relationships, custom")
+    column: Optional[str] = Field(default="", description="Column the rule applies to")
+    description: Optional[str] = Field(default="", description="Description of the quality rule")
+    severity: Optional[str] = Field(default="warn", description="warn or error")
+
+    @field_validator("entity", "rule_type", "column", "description", "severity", mode="before")
+    @classmethod
+    def _coerce_str(cls, v: Any) -> str:
+        return str(v) if v is not None else ""
 
 
 class ProjectSpecification(BaseModel):
@@ -64,6 +98,27 @@ class ProjectSpecification(BaseModel):
     data_quality_requirements: list[DataQualityRequirement] = Field(default_factory=list)
     assumptions: list[str] = Field(default_factory=list, description="Assumptions made during analysis")
     clarification_questions: list[str] = Field(default_factory=list, description="Questions needing human clarification")
+
+    @field_validator("objectives", "assumptions", "clarification_questions", mode="before")
+    @classmethod
+    def _coerce_str_list(cls, v: Any) -> list[str]:
+        if isinstance(v, list):
+            return [str(x) for x in v if x is not None]
+        return []
+
+    @field_validator("source_systems", "business_entities", "business_rules", mode="before")
+    @classmethod
+    def _coerce_dict_list(cls, v: Any) -> list[dict[str, Any]]:
+        if isinstance(v, list):
+            return [x for x in v if isinstance(x, dict)]
+        return []
+
+    @field_validator("transformation_requirements", "output_models", "incremental_requirements", "data_quality_requirements", mode="before")
+    @classmethod
+    def _coerce_obj_list(cls, v: Any) -> list[Any]:
+        if isinstance(v, list):
+            return [x for x in v if x is not None]
+        return []
 
 
 # ---------------------------------------------------------------------------
@@ -165,18 +220,41 @@ class RequirementAgent(BaseAgent):
             raw_response: dict = self._call_gemini_json(prompt)
 
             # ------------------------------------------------------------------
-            # 3. Validate via Pydantic
+            # 3. Validate via Pydantic (with graceful dictionary fallback)
             # ------------------------------------------------------------------
-            spec = ProjectSpecification.model_validate(raw_response)
-            specification_dict: dict = spec.model_dump()
+            try:
+                spec = ProjectSpecification.model_validate(raw_response)
+                specification_dict: dict = spec.model_dump()
+            except ValidationError as val_err:
+                logger.warning(
+                    "RequirementAgent: Pydantic validation warning (%s). Using sanitized raw dictionary.",
+                    val_err,
+                )
+                specification_dict = {
+                    "objectives": [str(x) for x in raw_response.get("objectives", []) if x],
+                    "source_systems": [x for x in raw_response.get("source_systems", []) if isinstance(x, dict)],
+                    "business_entities": [x for x in raw_response.get("business_entities", []) if isinstance(x, dict)],
+                    "business_rules": [x for x in raw_response.get("business_rules", []) if isinstance(x, dict)],
+                    "transformation_requirements": [x for x in raw_response.get("transformation_requirements", []) if isinstance(x, dict)],
+                    "output_models": [x for x in raw_response.get("output_models", []) if isinstance(x, dict)],
+                    "incremental_requirements": [x for x in raw_response.get("incremental_requirements", []) if isinstance(x, dict)],
+                    "data_quality_requirements": [x for x in raw_response.get("data_quality_requirements", []) if isinstance(x, dict)],
+                    "assumptions": [str(x) for x in raw_response.get("assumptions", []) if x],
+                    "clarification_questions": [str(x) for x in raw_response.get("clarification_questions", []) if x],
+                }
+
+            obj_cnt = len(specification_dict.get("objectives", []))
+            src_cnt = len(specification_dict.get("source_systems", []))
+            ent_cnt = len(specification_dict.get("business_entities", []))
+            out_cnt = len(specification_dict.get("output_models", []))
 
             logger.info(
                 "RequirementAgent: parsed specification with %d objectives, "
                 "%d source systems, %d entities, %d output models",
-                len(spec.objectives),
-                len(spec.source_systems),
-                len(spec.business_entities),
-                len(spec.output_models),
+                obj_cnt,
+                src_cnt,
+                ent_cnt,
+                out_cnt,
             )
 
             # ------------------------------------------------------------------
@@ -190,23 +268,24 @@ class RequirementAgent(BaseAgent):
                 "action": "requirement_analysis",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "summary": (
-                    f"Identified {len(spec.objectives)} objectives, "
-                    f"{len(spec.source_systems)} source systems, "
-                    f"{len(spec.business_entities)} entities, "
-                    f"{len(spec.output_models)} output models"
+                    f"Identified {obj_cnt} objectives, "
+                    f"{src_cnt} source systems, "
+                    f"{ent_cnt} entities, "
+                    f"{out_cnt} output models"
                 ),
             })
 
-            if spec.clarification_questions:
+            clarifications = specification_dict.get("clarification_questions", [])
+            if clarifications:
                 state.setdefault("warnings", []).append(
-                    f"RequirementAgent: {len(spec.clarification_questions)} clarification "
+                    f"RequirementAgent: {len(clarifications)} clarification "
                     "questions were generated — review before proceeding."
                 )
 
             self._update_agent_status(
                 state,
                 "completed",
-                f"Specification generated with {len(spec.output_models)} output models",
+                f"Specification generated with {out_cnt} output models",
             )
             logger.info("RequirementAgent: execution completed successfully")
 

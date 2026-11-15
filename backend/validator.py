@@ -241,20 +241,41 @@ class Validator:
 
     def run_dbt_parse(self) -> Dict[str, Any]:
         """Execute `dbt parse` in project directory."""
-        if not self.dbt_runner:
+        if not self.dbt_runner or not self.project_dir:
             return {"passed": False, "errors": ["No project directory configured"], "raw_output": ""}
+        if not (self.project_dir / "dbt_project.yml").exists():
+            return {
+                "passed": False,
+                "errors": [{"file": "dbt_project.yml", "line": 1, "message": "No dbt_project.yml found in project directory."}],
+                "warnings": [],
+                "raw_output": "dbt parse skipped: No dbt_project.yml found in project directory.",
+            }
         return self._cmd_to_dict(self.dbt_runner.parse())
 
     def run_dbt_compile(self) -> Dict[str, Any]:
         """Execute `dbt compile` in project directory."""
-        if not self.dbt_runner:
+        if not self.dbt_runner or not self.project_dir:
             return {"passed": False, "errors": ["No project directory configured"], "raw_output": ""}
+        if not (self.project_dir / "dbt_project.yml").exists():
+            return {
+                "passed": False,
+                "errors": [{"file": "dbt_project.yml", "line": 1, "message": "No dbt_project.yml found in project directory."}],
+                "warnings": [],
+                "raw_output": "dbt compile skipped: No dbt_project.yml found in project directory.",
+            }
         return self._cmd_to_dict(self.dbt_runner.compile())
 
     def run_sqlfluff_lint(self) -> Dict[str, Any]:
         """Execute `sqlfluff lint` on models directory."""
-        if not self.dbt_runner:
+        if not self.dbt_runner or not self.project_dir:
             return {"passed": False, "errors": ["No project directory configured"], "raw_output": ""}
+        if not (self.project_dir / "models").exists():
+            return {
+                "passed": True,
+                "errors": [],
+                "warnings": [],
+                "raw_output": "SQLFluff skipped: No models directory found to lint.",
+            }
         return self._cmd_to_dict(self.dbt_runner.sqlfluff_lint())
 
     # ----------------------------------------------------------------------

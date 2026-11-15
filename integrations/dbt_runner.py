@@ -316,11 +316,19 @@ class DbtRunner:
         timeout: int = DEFAULT_TIMEOUT,
     ) -> CommandResult:
         """Run ``sqlfluff lint`` against project SQL files."""
+        models_dir = self.project_dir / "models"
+        if not models_dir.exists() and not paths:
+            return CommandResult(
+                command="sqlfluff lint",
+                return_code=0,
+                stdout="No models directory found to lint.",
+                stderr="",
+            )
         args = ["sqlfluff", "lint", "--dialect", "snowflake"]
         if paths:
             args.extend(paths)
         else:
-            args.append(str(self.project_dir / "models"))
+            args.append(str(models_dir))
         return self._run(args, timeout=timeout, cwd=self.project_dir)
 
     def sqlfluff_fix(
@@ -329,9 +337,17 @@ class DbtRunner:
         timeout: int = DEFAULT_TIMEOUT,
     ) -> CommandResult:
         """Run ``sqlfluff fix`` against project SQL files."""
+        models_dir = self.project_dir / "models"
+        if not models_dir.exists() and not paths:
+            return CommandResult(
+                command="sqlfluff fix",
+                return_code=0,
+                stdout="No models directory found to fix.",
+                stderr="",
+            )
         args = ["sqlfluff", "fix", "--dialect", "snowflake", "--force"]
         if paths:
             args.extend(paths)
         else:
-            args.append(str(self.project_dir / "models"))
+            args.append(str(models_dir))
         return self._run(args, timeout=timeout, cwd=self.project_dir)

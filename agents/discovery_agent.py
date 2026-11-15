@@ -156,24 +156,17 @@ class DiscoveryAgent(BaseAgent):
         except Exception as exc:
             logger.warning("DiscoveryAgent: columns query failed — %s", exc)
 
-        # Primary / foreign keys
+        # Primary / foreign keys / table constraints
         keys_query = (
-            "SELECT tc.table_schema, tc.table_name, tc.constraint_type, "
-            "kcu.column_name, kcu.ordinal_position, "
-            "rc.unique_constraint_schema, rc.unique_constraint_name "
+            "SELECT tc.table_schema, tc.table_name, tc.constraint_type, tc.constraint_name "
             "FROM information_schema.table_constraints tc "
-            "JOIN information_schema.key_column_usage kcu "
-            "  ON tc.constraint_name = kcu.constraint_name "
-            "  AND tc.table_schema = kcu.table_schema "
-            "LEFT JOIN information_schema.referential_constraints rc "
-            "  ON tc.constraint_name = rc.constraint_name "
             "WHERE tc.table_schema NOT IN ('INFORMATION_SCHEMA') "
             "ORDER BY tc.table_schema, tc.table_name"
         )
         try:
             metadata["keys"] = snowflake_client.execute_query(keys_query)
         except Exception as exc:
-            logger.warning("DiscoveryAgent: keys query failed — %s", exc)
+            logger.debug("DiscoveryAgent: keys query note — %s", exc)
 
         return metadata
 
