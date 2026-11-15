@@ -130,6 +130,33 @@ class PackagingAgent(BaseAgent):
                     self.file_manager.write_file(rel_path, content)
                     written_files.append(rel_path)
 
+            # Ensure profiles.yml is written for immediate dbt CLI execution
+            if "profiles.yml" not in written_files:
+                try:
+                    from config.settings import get_settings
+                    s = get_settings()
+                    pwd = s.snowflake_password.get_secret_value() if hasattr(s.snowflake_password, 'get_secret_value') else str(s.snowflake_password)
+                    prof_content = (
+                        f"{project_name}:\n"
+                        f"  target: dev\n"
+                        f"  outputs:\n"
+                        f"    dev:\n"
+                        f"      type: snowflake\n"
+                        f"      account: {s.snowflake_account}\n"
+                        f"      user: {s.snowflake_user}\n"
+                        f"      password: '{pwd}'\n"
+                        f"      role: {s.snowflake_role or 'ACCOUNTADMIN'}\n"
+                        f"      database: {s.snowflake_database or 'ECOM_DB'}\n"
+                        f"      warehouse: {s.snowflake_warehouse or 'COMPUTE_WH'}\n"
+                        f"      schema: {s.snowflake_schema or 'RAW'}\n"
+                        f"      threads: 4\n"
+                        f"      client_session_keep_alive: false\n"
+                    )
+                    self.file_manager.write_file("profiles.yml", prof_content)
+                    written_files.append("profiles.yml")
+                except Exception as e:
+                    logger.warning("Could not write profiles.yml: %s", e)
+
             # ---- Create ZIP archive ----
             zip_dir = os.path.dirname(os.path.normpath(project_dir)) or "generated_projects"
             zip_path = os.path.join(zip_dir, f"{project_name}.zip")

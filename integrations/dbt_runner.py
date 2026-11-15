@@ -85,10 +85,61 @@ class DbtRunner:
         profiles_dir: Optional[str | Path] = None,
     ) -> None:
         self.project_dir = Path(project_dir).resolve()
-        self.profiles_dir = Path(profiles_dir).resolve() if profiles_dir else None
-        logger.info("DbtRunner initialised (project_dir=%s)", self.project_dir)
+        self.profiles_dir = Path(profiles_dir).resolve() if profiles_dir else self.project_dir
+        self._ensure_profiles_yml()
+        logger.info("DbtRunner initialised (project_dir=%s, profiles_dir=%s)", self.project_dir, self.profiles_dir)
+
+    def _ensure_profiles_yml(self) -> None:
+        """Ensure a valid profiles.yml exists in profiles_dir."""
+        profiles_file = self.profiles_dir / "profiles.yml"
+        if profiles_file.exists():
+            return
+
+        try:
+            from config.settings import get_settings
+            s = get_settings()
+            pwd = s.snowflake_password.get_secret_value() if hasattr(s.snowflake_password, 'get_secret_value') else str(s.snowflake_password)
+            proj_name = self.project_dir.name
+
+            content = (
+                f"{proj_name}:\n"
+                f"  target: dev\n"
+                f"  outputs:\n"
+                f"    dev:\n"
+                f"      type: snowflake\n"
+                f"      account: {s.snowflake_account}\n"
+                f"      user: {s.snowflake_user}\n"
+                f"      password: '{pwd}'\n"
+                f"      role: {s.snowflake_role or 'ACCOUNTADMIN'}\n"
+                f"      database: {s.snowflake_database or 'ECOM_DB'}\n"
+                f"      warehouse: {s.snowflake_warehouse or 'COMPUTE_WH'}\n"
+                f"      schema: {s.snowflake_schema or 'RAW'}\n"
+                f"      threads: 4\n"
+                f"      client_session_keep_alive: false\n"
+            )
+            self.profiles_dir.mkdir(parents=True, exist_ok=True)
+            profiles_file.write_text(content, encoding="utf-8")
+            logger.info("Auto-generated profiles.yml in %s", self.profiles_dir)
+        except Exception as exc:
+            logger.warning("Could not auto-generate profiles.yml: %s", exc)
 
     # ── private helpers ─────────────────────────────────────────────────
+
+    @staticmethod
+    def _resolve_binary(name: str) -> str:
+        """Resolve executable path, checking shutil.which and virtualenv Scripts/bin."""
+        import shutil
+        import sys
+
+        found = shutil.which(name)
+        if found:
+            return found
+        venv_dir = Path(sys.executable).parent
+        for ext in ("", ".exe", ".cmd", ".bat"):
+            candidate = venv_dir / f"{name}{ext}"
+            if candidate.is_file():
+                return str(candidate)
+        return name
 
     def _run(
         self,
@@ -97,13 +148,16 @@ class DbtRunner:
         cwd: Optional[Path] = None,
     ) -> CommandResult:
         """Execute *args* as a subprocess and return a ``CommandResult``."""
-        cmd_str = " ".join(args)
+        resolved_args = list(args)
+        if resolved_args:
+            resolved_args[0] = self._resolve_binary(resolved_args[0])
+        cmd_str = " ".join(resolved_args)
         work_dir = cwd or self.project_dir
         logger.info("Running: %s (cwd=%s, timeout=%ds)", cmd_str, work_dir, timeout)
 
         try:
             proc = subprocess.run(
-                args,
+                resolved_args,
                 cwd=str(work_dir),
                 capture_output=True,
                 text=True,
@@ -146,9 +200,15 @@ class DbtRunner:
 
     def _dbt_cmd(self, subcommand: str, extra_args: Optional[List[str]] = None) -> List[str]:
         """Return dbt CLI arguments with subcommand placed first."""
-        args = ["dbt", subcommand, "--project-dir", str(self.project_dir)]
-        if self.profiles_dir:
-            args.extend(["--profiles-dir", str(self.profiles_dir)])
+        self._ensure_profiles_yml()
+        args = [
+            "dbt",
+            subcommand,
+            "--project-dir",
+            str(self.project_dir),
+            "--profiles-dir",
+            str(self.profiles_dir),
+        ]
         if extra_args:
             args.extend(extra_args)
         return args
@@ -165,11 +225,45 @@ class DbtRunner:
 
     def parse(self, timeout: int = DEFAULT_TIMEOUT) -> CommandResult:
         """Run ``dbt parse``."""
-        return self._run(self._dbt_cmd("parse"), timeout=timeout)
+        pkg_file = self.project_dir / "packages.yml"
+        pkg_tmp = self.project_dir / "packages.yml.tmp"
+        has_installed = (self.project_dir / "dbt_packages").exists()
+        renamed = False
+        if pkg_file.exists() and not has_installed:
+            try:
+                pkg_file.rename(pkg_tmp)
+                renamed = True
+            except Exception:
+                pass
+        try:
+            return self._run(self._dbt_cmd("parse"), timeout=timeout)
+        finally:
+            if renamed and pkg_tmp.exists():
+                try:
+                    pkg_tmp.rename(pkg_file)
+                except Exception:
+                    pass
 
     def compile(self, timeout: int = DEFAULT_TIMEOUT) -> CommandResult:
         """Run ``dbt compile``."""
-        return self._run(self._dbt_cmd("compile"), timeout=timeout)
+        pkg_file = self.project_dir / "packages.yml"
+        pkg_tmp = self.project_dir / "packages.yml.tmp"
+        has_installed = (self.project_dir / "dbt_packages").exists()
+        renamed = False
+        if pkg_file.exists() and not has_installed:
+            try:
+                pkg_file.rename(pkg_tmp)
+                renamed = True
+            except Exception:
+                pass
+        try:
+            return self._run(self._dbt_cmd("compile"), timeout=timeout)
+        finally:
+            if renamed and pkg_tmp.exists():
+                try:
+                    pkg_tmp.rename(pkg_file)
+                except Exception:
+                    pass
 
     def test(
         self,

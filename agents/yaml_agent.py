@@ -9,6 +9,7 @@ content strings.
 
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -135,9 +136,24 @@ class YAMLDeveloperAgent(BaseAgent):
             # ----------------------------------------------------------
             # Step 2: Generate sources.yml
             # ----------------------------------------------------------
+            # Extract any source('source_name', 'table_name') calls already used by sql_developer
+            used_sources = set()
+            for sql in state.get("generated_models", {}).values():
+                for m in re.finditer(r"source\(\s*['\"]([^'\"]+)['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)", sql):
+                    used_sources.add(f"source('{m.group(1)}', '{m.group(2)}')")
+
+            used_sources_str = ""
+            if used_sources:
+                used_sources_str = (
+                    "\n\nCRITICAL: The generated SQL staging models use these exact source calls:\n"
+                    + "\n".join(f"- {s}" for s in sorted(used_sources))
+                    + "\nYou MUST declare source definitions with these exact source names and table names in sources.yml so every reference resolves!"
+                )
+
             sources_prompt = (
                 "Generate a dbt sources.yml file based on this source catalog:\n\n"
-                f"## Source Catalog\n{json.dumps(source_catalog, indent=2)}\n\n"
+                f"## Source Catalog\n{json.dumps(source_catalog, indent=2)}\n"
+                f"{used_sources_str}\n\n"
                 "Include:\n"
                 "- All source tables with their columns\n"
                 "- Column descriptions and data types\n"

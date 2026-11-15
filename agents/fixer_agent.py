@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import re
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -47,9 +48,10 @@ class FixerAgent(BaseAgent):
                 "not refactor, reformat, or reorganise code that is not broken.\n"
                 "2. Preserve the original CTE structure, indentation style, "
                 "and comment blocks.\n"
-                "3. If a ``ref()`` or ``source()`` target is invalid and you "
-                "cannot confidently determine the correct target, add a "
-                "``-- FIXME:`` comment instead of guessing.\n"
+                "3. If a ``ref()`` or ``source()`` target is invalid, use the correct "
+                "declared model or source name. NEVER put SQL comments inside Jinja tags "
+                "like {{ -- FIXME: ... }}, as this breaks dbt parsing. Comments must always "
+                "be placed on their own line OUTSIDE Jinja expressions.\n"
                 "4. For naming-convention violations, rename the model "
                 "reference consistently throughout the file.\n"
                 "5. For YAML errors, ensure the output is valid YAML that "
@@ -225,7 +227,13 @@ class FixerAgent(BaseAgent):
         prompt = "\n".join(prompt_parts)
 
         try:
-            return self._call_gemini_json(prompt)
+            res = self._call_gemini_json(prompt)
+            if res and isinstance(res, dict) and "corrected_content" in res:
+                content = res["corrected_content"]
+                # Strip invalid Jinja comments like {{ -- ... }} or {{ /* ... */ }}
+                content = re.sub(r"\{\{\s*(?:--|/\*|#)[^\}]*\}\}", "", content)
+                res["corrected_content"] = content
+            return res
         except Exception as exc:
             logger.error("Gemini fix call failed for %s: %s", file_path, exc)
             return None
