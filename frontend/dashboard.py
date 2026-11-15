@@ -101,21 +101,21 @@ def render_dashboard_home(db: Database) -> None:
                     "Created": p["created_at"][:19].replace("T", " "),
                     "Output Path": p["output_path"] or "In Memory",
                 })
-            st.dataframe(table_data, use_container_width=True)
+            st.dataframe(table_data, width='stretch')
         else:
             st.info("No projects generated yet. Click **Create New Project** to start.")
 
     with col_right:
         st.markdown("### ⚡ Quick Actions")
-        if st.button("🚀 Create New Project", use_container_width=True, type="primary"):
+        if st.button("🚀 Create New Project", width='stretch', type="primary"):
             st.session_state["nav_selection"] = "🚀 New Project"
             st.rerun()
 
-        if st.button("🤖 Inspect AI Agents", use_container_width=True):
+        if st.button("🤖 Inspect AI Agents", width='stretch'):
             st.session_state["nav_selection"] = "🤖 AI Agents"
             st.rerun()
 
-        if st.button("🔧 API Key & Settings", use_container_width=True):
+        if st.button("🔧 API Key & Settings", width='stretch'):
             st.session_state["nav_selection"] = "🔧 Settings"
             st.rerun()
 

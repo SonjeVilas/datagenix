@@ -77,15 +77,15 @@ def render_validation_center_page() -> None:
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("🔄 Re-run All Validations", type="primary", use_container_width=True):
+        if st.button("🔄 Re-run All Validations", type="primary", width='stretch'):
             _run_validations()
 
     with col2:
-        if st.button("🔧 Fix Errors (Fixer Agent)", use_container_width=True):
+        if st.button("🔧 Fix Errors (Fixer Agent)", width='stretch'):
             _run_fixer_agent()
 
     with col3:
-        if st.button("📋 Export Report", use_container_width=True):
+        if st.button("📋 Export Report", width='stretch'):
             _export_report(validation_results, qa_report)
 
 

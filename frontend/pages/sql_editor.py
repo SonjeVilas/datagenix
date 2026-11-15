@@ -110,18 +110,18 @@ def render_sql_editor_page() -> None:
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
-            if st.button("✅ Validate", key="sql_validate", use_container_width=True):
+            if st.button("✅ Validate", key="sql_validate", width='stretch'):
                 _validate_sql(edited_sql, selected_file)
 
         with col2:
-            if st.button("🎨 Format", key="sql_format", use_container_width=True):
+            if st.button("🎨 Format", key="sql_format", width='stretch'):
                 formatted = _format_sql(edited_sql)
                 if formatted:
                     st.session_state[f"sql_edit_{selected_file}"] = formatted
                     st.rerun()
 
         with col3:
-            if st.button("💾 Save", key="sql_save", type="primary", use_container_width=True):
+            if st.button("💾 Save", key="sql_save", type="primary", width='stretch'):
                 _save_sql(selected_file, edited_sql)
 
         with col4:
@@ -130,7 +130,7 @@ def render_sql_editor_page() -> None:
                 data=edited_sql,
                 file_name=Path(selected_file).name,
                 key="sql_download",
-                use_container_width=True,
+                width='stretch',
             )
 
 

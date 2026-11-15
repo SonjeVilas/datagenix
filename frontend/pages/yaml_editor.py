@@ -110,11 +110,11 @@ def render_yaml_editor_page() -> None:
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            if st.button("✅ Validate YAML", key="yaml_validate", use_container_width=True):
+            if st.button("✅ Validate YAML", key="yaml_validate", width='stretch'):
                 _validate_yaml(edited_yaml)
 
         with col2:
-            if st.button("💾 Save", key="yaml_save", type="primary", use_container_width=True):
+            if st.button("💾 Save", key="yaml_save", type="primary", width='stretch'):
                 _save_yaml(selected_file, edited_yaml)
 
         with col3:
@@ -123,7 +123,7 @@ def render_yaml_editor_page() -> None:
                 data=edited_yaml,
                 file_name=Path(selected_file).name,
                 key="yaml_download",
-                use_container_width=True,
+                width='stretch',
             )
 
         # Parsed preview

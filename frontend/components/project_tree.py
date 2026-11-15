@@ -174,7 +174,7 @@ def _render_node(
         if st.button(
             f"{icon} {node['name']} ({size_str})",
             key=btn_key,
-            use_container_width=True,
+            width='stretch',
         ):
             selected = node["path"]
             st.session_state[f"{key_prefix}_selected_file"] = node["path"]

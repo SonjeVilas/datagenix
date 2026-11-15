@@ -180,7 +180,7 @@ def render_settings_page() -> None:
         st.markdown("---")
 
         # Submit
-        submitted = st.form_submit_button("💾 Save Settings", type="primary", use_container_width=True)
+        submitted = st.form_submit_button("💾 Save Settings", type="primary", width='stretch')
 
     if submitted:
         _save_settings(
@@ -220,11 +220,11 @@ def render_settings_page() -> None:
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("🤖 Test Gemini Connection", use_container_width=True):
+        if st.button("🤖 Test Gemini Connection", width='stretch'):
             _test_gemini_connection()
 
     with col2:
-        if st.button("❄️ Test Snowflake Connection", use_container_width=True):
+        if st.button("❄️ Test Snowflake Connection", width='stretch'):
             _test_snowflake_connection()
 
 

@@ -184,17 +184,17 @@ def render_new_project_page() -> None:
         analyze_clicked = st.button(
             "🤖 Analyze Requirements & Generate Project",
             type="primary",
-            use_container_width=True,
+            width='stretch',
             disabled=st.session_state.np_pipeline_running,
         )
     with col2:
-        if st.button("🔄 Reset Form", use_container_width=True):
+        if st.button("🔄 Reset Form", width='stretch'):
             for key in list(st.session_state.keys()):
                 if key.startswith("np_"):
                     del st.session_state[key]
             st.rerun()
     with col3:
-        if st.button("📋 Preview Config", use_container_width=True):
+        if st.button("📋 Preview Config", width='stretch'):
             _show_config_preview()
 
     # Handle analyze button

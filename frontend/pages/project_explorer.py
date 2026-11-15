@@ -101,7 +101,7 @@ def render_project_explorer_page() -> None:
                 data=zip_bytes,
                 file_name=f"{project_name}.zip",
                 mime="application/zip",
-                use_container_width=True,
+                width='stretch',
             )
     with col_dl2:
         st.metric("Total Files", len(all_files))

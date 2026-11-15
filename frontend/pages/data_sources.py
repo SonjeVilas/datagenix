@@ -187,7 +187,7 @@ def _render_schema_browser() -> None:
         if columns:
             import pandas as pd
             df = pd.DataFrame(columns)
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(df, width='stretch', hide_index=True)
         else:
             st.info("No column metadata loaded for this table.")
 
@@ -226,7 +226,7 @@ def _render_manual_upload_tab() -> None:
                         import pandas as pd
                         from io import StringIO
                         df = pd.read_csv(StringIO(content))
-                        st.dataframe(df, use_container_width=True, hide_index=True)
+                        st.dataframe(df, width='stretch', hide_index=True)
                     else:
                         st.code(content)
             except Exception as e:
@@ -273,7 +273,7 @@ def _render_catalog_tab() -> None:
             if cols_data:
                 import pandas as pd
                 df = pd.DataFrame(cols_data)
-                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.dataframe(df, width='stretch', hide_index=True)
             else:
                 st.caption("No column metadata.")
 

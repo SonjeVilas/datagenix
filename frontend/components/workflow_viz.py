@@ -96,7 +96,7 @@ def render_workflow_viz(
     dot_source = _build_graphviz_source(agent_statuses)
 
     try:
-        st.graphviz_chart(dot_source, use_container_width=True)
+        st.graphviz_chart(dot_source, width='stretch')
     except Exception:
         # Fallback to text-based representation
         st.markdown("**Pipeline Flow:**")

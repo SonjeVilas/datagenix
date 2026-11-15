@@ -104,20 +104,20 @@ def render_agents_page() -> None:
         start_clicked = st.button(
             "▶️ Start Pipeline",
             type="primary",
-            use_container_width=True,
+            width='stretch',
             disabled=st.session_state.get("pipeline_running", False),
         )
     with col2:
         stop_clicked = st.button(
             "⏹️ Stop",
-            use_container_width=True,
+            width='stretch',
             disabled=not st.session_state.get("pipeline_running", False),
         )
     with col3:
-        if st.button("🔄 Refresh Status", use_container_width=True):
+        if st.button("🔄 Refresh Status", width='stretch'):
             st.rerun()
     with col4:
-        if st.button("🗑️ Clear State", use_container_width=True):
+        if st.button("🗑️ Clear State", width='stretch'):
             if "current_project_state" in st.session_state:
                 del st.session_state["current_project_state"]
             st.session_state["pipeline_running"] = False

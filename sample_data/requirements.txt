@@ -1,0 +1,24 @@
+Project Name: retail_analytics_v1
+Project Description: Retail Store Sales and Customer Lifetime Analytics
+
+Business Requirements:
+We operate a retail store with sales data in Snowflake. We need a clean dimensional dbt project.
+
+Sources:
+- Database: ECOM_DB
+- Schema: RAW
+- Tables:
+  1. CUSTOMERS (columns: customer_id, first_name, last_name, email, created_at)
+  2. ORDERS (columns: order_id, customer_id, order_date, status, total_amount)
+
+Transformations:
+1. Staging:
+   - stg_customers: Standardize customer names, lowercase email, cast created_at to timestamp.
+   - stg_orders: Cast order_id and customer_id to integer, cast total_amount to numeric(10,2).
+
+2. Marts:
+   - dim_customers: Customer dimension table containing customer_id, first_name, last_name, email, total_orders, and total_spend.
+   - fct_orders: Order fact table containing order_id, customer_id, order_date, status, total_amount, and is_completed flag.
+
+3. Testing:
+   - Primary key unique and not_null tests on customer_id and order_id.
