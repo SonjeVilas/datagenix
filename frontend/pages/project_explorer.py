@@ -28,7 +28,7 @@ except ImportError:
 
 
 def _get_project_files() -> dict[str, str]:
-    """Gather all generated project files from session state."""
+    """Gather all generated project files from session state or disk."""
     state = st.session_state.get("current_project_state", {})
     all_files: dict[str, str] = {}
 
@@ -37,6 +37,18 @@ def _get_project_files() -> dict[str, str]:
         files = state.get(key, {})
         if isinstance(files, dict):
             all_files.update(files)
+
+    # Fallback to scanning disk if in-memory is empty
+    output_path = state.get("project_output_path")
+    if not all_files and output_path and os.path.isdir(output_path):
+        root_p = Path(output_path)
+        for p in root_p.rglob("*"):
+            if p.is_file() and not p.name.startswith("."):
+                try:
+                    rel = str(p.relative_to(root_p)).replace("\\", "/")
+                    all_files[rel] = p.read_text(encoding="utf-8")
+                except Exception:
+                    pass
 
     return all_files
 
@@ -131,15 +143,34 @@ def _render_file_viewer(
     # Try to get content from in-memory files dict
     if filepath in files:
         content = files[filepath]
-    elif project_path:
-        # Try to read from disk
-        full_path = os.path.join(project_path, filepath) if not os.path.isabs(filepath) else filepath
+    elif os.path.isfile(filepath):
         try:
-            with open(full_path, "r", encoding="utf-8") as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 content = f.read()
         except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
             st.error(f"Cannot read file: {e}", icon="❌")
             return
+    elif project_path:
+        # Check potential disk locations safely without duplicate folder joins
+        candidates = [
+            os.path.join(project_path, filepath),
+        ]
+        base_name = os.path.basename(project_path)
+        if base_name and base_name in filepath:
+            try:
+                candidates.append(os.path.join(project_path, os.path.relpath(filepath, base_name)))
+            except ValueError:
+                pass
+
+        for cand in candidates:
+            if cand and os.path.isfile(cand):
+                try:
+                    with open(cand, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    break
+                except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
+                    st.error(f"Cannot read file: {e}", icon="❌")
+                    return
 
     if content is None:
         st.warning(f"File content not found: {filepath}", icon="⚠️")
@@ -176,7 +207,14 @@ def _render_file_viewer(
                 if project_path and FileManager is not None:
                     try:
                         fm = FileManager(project_path)
-                        fm.write_file(filepath, edited_content)
+                        save_rel = filepath
+                        base_name = os.path.basename(project_path)
+                        if base_name and base_name in save_rel:
+                            try:
+                                save_rel = os.path.relpath(save_rel, base_name)
+                            except ValueError:
+                                pass
+                        fm.write_file(save_rel, edited_content)
                     except Exception as e:
                         logger.warning(f"Could not save to disk: {e}")
 

@@ -234,14 +234,22 @@ class PackagingAgent(BaseAgent):
         os.makedirs(os.path.dirname(zip_path) or ".", exist_ok=True)
 
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            seen_entries: set[str] = set()
+
+            def _add_to_zip(arc_path: str, data: str) -> None:
+                clean_arc = arc_path.replace("\\", "/").strip("/")
+                if clean_arc not in seen_entries:
+                    zf.writestr(clean_arc, data)
+                    seen_entries.add(clean_arc)
+
             # Add README and requirements
-            zf.writestr(f"{project_name}/README.md", readme_content)
-            zf.writestr(f"{project_name}/requirements.txt", requirements_content)
+            _add_to_zip(f"{project_name}/README.md", readme_content)
+            _add_to_zip(f"{project_name}/requirements.txt", requirements_content)
 
             # Add all artefact files
             for _category, files in artefacts.items():
                 for rel_path, content in files.items():
-                    zf.writestr(f"{project_name}/{rel_path}", content)
+                    _add_to_zip(f"{project_name}/{rel_path}", content)
 
         logger.info("Created ZIP archive: %s", zip_path)
 

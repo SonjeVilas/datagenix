@@ -22,10 +22,24 @@ except ImportError:
 
 
 def _get_sql_files() -> dict[str, str]:
-    """Get all SQL model files from project state."""
+    """Get all SQL model files from project state or disk."""
     state = st.session_state.get("current_project_state", {})
     models = state.get("generated_models", {})
-    return {k: v for k, v in models.items() if k.endswith(".sql")} if isinstance(models, dict) else {}
+    sql_files = {k: v for k, v in models.items() if k.endswith(".sql")} if isinstance(models, dict) else {}
+
+    # If empty, check disk output directory
+    if not sql_files:
+        output_path = state.get("project_output_path")
+        if output_path and Path(output_path).exists():
+            root_p = Path(output_path)
+            for p in root_p.rglob("*.sql"):
+                try:
+                    rel = str(p.relative_to(root_p)).replace("\\", "/")
+                    sql_files[rel] = p.read_text(encoding="utf-8")
+                except Exception:
+                    pass
+
+    return sql_files
 
 
 def render_sql_editor_page() -> None:

@@ -73,10 +73,10 @@ class FixerAgent(BaseAgent):
             qa_report: dict[str, Any] = state.get("qa_report", {})
             issues: list[dict[str, Any]] = qa_report.get("issues", [])
 
-            # Filter to actionable issues
+            # Filter to actionable blocking errors only (never burn quota on cosmetic warnings)
             actionable = [
                 i for i in issues
-                if i.get("severity") in ("error", "warning")
+                if i.get("severity") == "error"
             ]
 
             if not actionable:

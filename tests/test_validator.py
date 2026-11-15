@@ -58,3 +58,23 @@ def test_validator_circular_dependency():
     assert not result["passed"]
     assert any(i["rule"] == "circular_dependency" for i in result["issues"])
 
+
+def test_validator_validate_all():
+    state = {
+        "generated_models": {
+            "models/staging/stg_test.sql": "select 1 as id",
+        },
+        "generated_yaml": {
+            "models/staging/schema.yml": "version: 2\nmodels:\n  - name: stg_test\n",
+        },
+    }
+    validator = Validator()
+    res = validator.validate_all(state)
+    assert "QA Agent" in res
+    assert "dbt_parse" in res
+    assert "dbt_compile" in res
+    assert "sqlfluff" in res
+    assert res["QA Agent"]["passed"] is True
+    assert "qa_report" in state
+    assert state["qa_report"]["passed"] is True
+

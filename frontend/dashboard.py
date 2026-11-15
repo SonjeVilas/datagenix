@@ -176,7 +176,7 @@ def main() -> None:
         st.markdown("---")
         # Warehouse status badge
         curr_state = st.session_state.get("current_project_state", {})
-        sf_connected = curr_state.get("snowflake_connected", False)
+        sf_connected = curr_state.get("snowflake_connected", False) or st.session_state.get("snowflake_connected", False)
         if sf_connected:
             st.success("❄️ Snowflake: Connected", icon="✅")
         else:

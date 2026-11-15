@@ -235,3 +235,105 @@ class Validator:
             return {"passed": False, "error": "No project directory configured"}
         return self.dbt_runner.sqlfluff_lint()
 
+    # ----------------------------------------------------------------------
+    # Aggregated Validation Runner
+    # ----------------------------------------------------------------------
+
+    def validate_all(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Run all applicable validations on state artifacts and return formatted results."""
+        generated_models = state.get("generated_models", {})
+        generated_yaml = state.get("generated_yaml", {})
+        generated_tests = state.get("generated_tests", {})
+
+        # If in-memory is empty, try loading from disk
+        output_path = state.get("project_output_path")
+        if output_path and Path(output_path).exists():
+            self.project_dir = Path(output_path).resolve()
+            self.dbt_runner = DbtRunner(self.project_dir)
+
+            if not generated_models:
+                for p in self.project_dir.rglob("*.sql"):
+                    try:
+                        rel = str(p.relative_to(self.project_dir))
+                        generated_models[rel] = p.read_text(encoding="utf-8")
+                    except Exception:
+                        pass
+            if not generated_yaml:
+                for p in self.project_dir.rglob("*.yml"):
+                    try:
+                        rel = str(p.relative_to(self.project_dir))
+                        generated_yaml[rel] = p.read_text(encoding="utf-8")
+                    except Exception:
+                        pass
+
+        # 1. Static artifact validation
+        artifact_res = self.validate_artifacts(generated_models, generated_yaml, generated_tests)
+        issues = artifact_res.get("issues", [])
+        art_errors = [i for i in issues if i.get("severity") == "error"]
+        art_warnings = [i for i in issues if i.get("severity") == "warning"]
+
+        # Update qa_report in state
+        qa_report = {
+            "passed": artifact_res.get("passed", False),
+            "summary": artifact_res.get("summary", ""),
+            "issues": issues,
+            "errors": art_errors,
+            "warnings": art_warnings,
+            "status": "passed" if artifact_res.get("passed") else "failed",
+        }
+        state["qa_report"] = qa_report
+
+        results: Dict[str, Any] = {
+            "QA Agent": {
+                "passed": artifact_res.get("passed", False),
+                "errors": art_errors,
+                "warnings": art_warnings,
+                "raw_output": artifact_res.get("summary", ""),
+            }
+        }
+
+        # 2. CLI checks if project is on disk
+        if self.dbt_runner:
+            parse_res = self.run_dbt_parse()
+            results["dbt_parse"] = {
+                "passed": parse_res.get("passed", False),
+                "errors": parse_res.get("errors", []),
+                "warnings": parse_res.get("warnings", []),
+                "raw_output": parse_res.get("output", "") or parse_res.get("error", ""),
+            }
+            compile_res = self.run_dbt_compile()
+            results["dbt_compile"] = {
+                "passed": compile_res.get("passed", False),
+                "errors": compile_res.get("errors", []),
+                "warnings": compile_res.get("warnings", []),
+                "raw_output": compile_res.get("output", "") or compile_res.get("error", ""),
+            }
+            fluff_res = self.run_sqlfluff_lint()
+            results["sqlfluff"] = {
+                "passed": fluff_res.get("passed", False),
+                "errors": fluff_res.get("errors", []),
+                "warnings": fluff_res.get("warnings", []),
+                "raw_output": fluff_res.get("output", "") or fluff_res.get("error", ""),
+            }
+        else:
+            results["dbt_parse"] = {
+                "passed": True,
+                "errors": [],
+                "warnings": [],
+                "raw_output": "dbt parse skipped: Project not written to disk.",
+            }
+            results["dbt_compile"] = {
+                "passed": True,
+                "errors": [],
+                "warnings": [],
+                "raw_output": "dbt compile skipped: Project not written to disk.",
+            }
+            results["sqlfluff"] = {
+                "passed": True,
+                "errors": [],
+                "warnings": [],
+                "raw_output": "SQLFluff skipped: Project not written to disk.",
+            }
+
+        return results
+

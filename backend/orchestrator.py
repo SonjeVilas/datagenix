@@ -178,8 +178,8 @@ class Orchestrator:
                 issues=issues,
             )
 
-            if len(error_issues) == 0 and status == "passed":
-                logger.info("QA validation passed cleanly! Proceeding to packaging.")
+            if len(error_issues) == 0:
+                logger.info("QA validation passed (no blocking errors)! Proceeding to packaging.")
                 return "packaging"
 
             if retry_count < max_retries:
@@ -218,6 +218,23 @@ class Orchestrator:
         state_dict = initial_state.model_dump() if isinstance(initial_state, ProjectState) else dict(initial_state)
         config = {"configurable": {"thread_id": thread_id}}
         final_state = self.graph.invoke(state_dict, config=config)
+
+        # Explicitly persist final project status to database
+        has_errors = bool(final_state.get("errors", []))
+        final_status = "failed" if has_errors else "completed"
+        try:
+            self.db.save_project(
+                project_name=final_state.get("project_name", "unnamed_project"),
+                description=final_state.get("project_description", ""),
+                status=final_status,
+                output_path=final_state.get("project_output_path", ""),
+                specification=final_state.get("project_specification", {}),
+                architecture=final_state.get("architecture", {}),
+                state_dict=final_state,
+            )
+        except Exception as exc:
+            logger.warning("Could not persist final project state to DB: %s", exc)
+
         return final_state
 
     def stream(

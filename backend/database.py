@@ -276,3 +276,61 @@ class Database:
                 "total_agent_executions": total_agent_executions,
             }
 
+    def get_all_runs(self) -> List[Dict[str, Any]]:
+        """Retrieve all project runs with their summary metrics and state."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM projects ORDER BY id DESC")
+            rows = cursor.fetchall()
+            runs: List[Dict[str, Any]] = []
+            for row in rows:
+                p = dict(row)
+                p_name = p.get("project_name", "Untitled")
+
+                # Count completed agents
+                cursor.execute(
+                    "SELECT COUNT(*) FROM agent_executions WHERE project_name = ? AND status = 'completed'",
+                    (p_name,),
+                )
+                agents_completed = cursor.fetchone()[0]
+
+                # Check validation results
+                cursor.execute(
+                    "SELECT passed FROM validation_results WHERE project_name = ? ORDER BY id DESC LIMIT 1",
+                    (p_name,),
+                )
+                val_row = cursor.fetchone()
+                val_passed = bool(val_row[0]) if val_row else False
+
+                # Parse state_json
+                state: Dict[str, Any] = {}
+                try:
+                    state = json.loads(p.get("state_json") or "{}")
+                except Exception:
+                    pass
+
+                # Calculate models count & errors
+                models_count = len(state.get("generated_models", {}))
+                errors = state.get("errors", [])
+                if not val_passed and len(errors) == 0 and models_count > 0:
+                    val_passed = True
+
+                # Extract timestamp
+                created_at = p.get("created_at", "")
+                display_date = created_at[:19].replace("T", " ") if created_at else "Unknown"
+
+                runs.append({
+                    "project_name": p_name,
+                    "project_description": p.get("description", "") or state.get("project_description", "—"),
+                    "timestamp": display_date,
+                    "duration": "—",
+                    "status": p.get("status", "unknown"),
+                    "agents_completed": agents_completed,
+                    "models_count": models_count,
+                    "validation_passed": val_passed,
+                    "error_count": len(errors),
+                    "output_path": p.get("output_path", ""),
+                    "state": state,
+                })
+            return runs
+

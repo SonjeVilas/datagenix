@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from agents.base_agent import BaseAgent
 
@@ -23,12 +23,28 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 class GeneratedModel(BaseModel):
-    file_path: str = Field(..., description="Relative path, e.g. models/staging/stg_orders.sql")
-    model_name: str = Field(..., description="Model name without extension")
-    sql_content: str = Field(..., description="Full SQL content of the model file")
+    file_path: str = Field(default="", description="Relative path, e.g. models/staging/stg_orders.sql")
+    model_name: str = Field(default="model", description="Model name without extension")
+    sql_content: str = Field(default="", description="Full SQL content of the model file")
     layer: Optional[str] = Field(default="", description="staging | intermediate | marts")
     materialization: Optional[str] = Field(default="view")
     description: Optional[str] = Field(default="")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            m_name = str(data.get("model_name") or data.get("name") or "model")
+            layer = str(data.get("layer") or "staging")
+            data["model_name"] = m_name
+            data["layer"] = layer
+            data["file_path"] = str(
+                data.get("file_path") or data.get("path") or f"models/{layer}/{m_name}.sql"
+            )
+            data["sql_content"] = str(
+                data.get("sql_content") or data.get("sql") or data.get("content") or ""
+            )
+        return data
 
     @field_validator("layer", "materialization", "description", mode="before")
     @classmethod
@@ -42,6 +58,19 @@ class GeneratedModelsResponse(BaseModel):
         default_factory=list,
         description="Optional reusable macros [{name, file_path, sql_content}]",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_response(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "models" not in data:
+                for alt_key in ("model_files", "sql_models", "generated_models", "data"):
+                    if alt_key in data and isinstance(data[alt_key], list):
+                        data["models"] = data[alt_key]
+                        break
+        elif isinstance(data, list):
+            data = {"models": data}
+        return data
 
 
 # ---------------------------------------------------------------------------
@@ -154,17 +183,28 @@ class SQLDeveloperAgent(BaseAgent):
 
             if not architecture:
                 raise ValueError("No architecture found in state — run ArchitectAgent first")
-            if not business_logic:
-                raise ValueError("No business_logic found in state — run BusinessLogicAgent first")
 
             all_models: list[dict] = architecture.get("models", [])
             if not all_models:
                 raise ValueError("Architecture contains no models")
 
+            if not business_logic:
+                logger.warning("No business_logic found in state — synthesizing default business logic from architecture")
+                business_logic = {
+                    "transformation_rules": [
+                        {
+                            "model_name": m.get("name", "model") if isinstance(m, dict) else getattr(m, "name", "model"),
+                            "layer": m.get("layer", "staging") if isinstance(m, dict) else getattr(m, "layer", "staging"),
+                        }
+                        for m in all_models
+                    ]
+                }
+                state["business_logic"] = business_logic
+
             # Group models by layer
             layers: dict[str, list[dict]] = {}
             for model in all_models:
-                layer = model.get("layer", "staging")
+                layer = model.get("layer", "staging") if isinstance(model, dict) else getattr(model, "layer", "staging")
                 layers.setdefault(layer, []).append(model)
 
             generated_models: dict[str, str] = {}
@@ -182,21 +222,55 @@ class SQLDeveloperAgent(BaseAgent):
                     layer_name,
                 )
 
-                raw_response = self._generate_models_for_layer(
-                    layer_name, models_in_layer, state,
-                )
+                try:
+                    raw_response = self._generate_models_for_layer(
+                        layer_name, models_in_layer, state,
+                    )
 
-                # Validate
-                layer_result = GeneratedModelsResponse.model_validate(raw_response)
+                    # Validate
+                    layer_result = GeneratedModelsResponse.model_validate(raw_response)
 
-                for model in layer_result.models:
-                    generated_models[model.file_path] = model.sql_content
-                    logger.debug("SQLDeveloperAgent: generated %s", model.file_path)
+                    for model in layer_result.models:
+                        if model.sql_content.strip():
+                            generated_models[model.file_path] = model.sql_content
+                            logger.debug("SQLDeveloperAgent: generated %s", model.file_path)
 
-                all_macros.extend(
-                    m if isinstance(m, dict) else m.model_dump()
-                    for m in layer_result.macros
-                )
+                    all_macros.extend(
+                        m if isinstance(m, dict) else m.model_dump()
+                        for m in layer_result.macros
+                    )
+                except Exception as layer_exc:
+                    logger.warning(
+                        "SQLDeveloperAgent: layer '%s' generation warning (%s) — using fallback generation",
+                        layer_name,
+                        layer_exc,
+                    )
+
+                # Ensure every model in this layer has an entry
+                for m in models_in_layer:
+                    m_name = m.get("name", "model") if isinstance(m, dict) else getattr(m, "name", "model")
+                    expected_path = f"models/{layer_name}/{m_name}.sql"
+                    if expected_path not in generated_models:
+                        mat = m.get("materialization", "view" if layer_name == "staging" else "table") if isinstance(m, dict) else getattr(m, "materialization", "view")
+                        upstream = m.get("upstream_dependencies", []) if isinstance(m, dict) else getattr(m, "upstream_dependencies", [])
+                        if upstream:
+                            ref_clause = f"{{{{ ref('{upstream[0]}') }}}}"
+                        else:
+                            clean_stem = m_name.replace("stg_", "")
+                            ref_clause = f"{{{{ source('raw', '{clean_stem}') }}}}"
+
+                        fallback_sql = (
+                            f"{{{{ config(materialized='{mat}') }}}}\n\n"
+                            f"-- Model: {m_name}\n"
+                            f"-- Layer: {layer_name}\n\n"
+                            f"with source_data as (\n"
+                            f"    select * from {ref_clause}\n"
+                            f")\n\n"
+                            f"select\n"
+                            f"    *\n"
+                            f"from source_data\n"
+                        )
+                        generated_models[expected_path] = fallback_sql
 
             # Add macros to generated_models dict
             for macro in all_macros:

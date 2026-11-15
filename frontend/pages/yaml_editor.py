@@ -16,14 +16,34 @@ except ImportError:
 
 
 def _get_yaml_files() -> dict[str, str]:
-    """Get all YAML files from project state."""
+    """Get all YAML files from project state or disk."""
     state = st.session_state.get("current_project_state", {})
     yaml_files = state.get("generated_yaml", {})
-    return (
+    res = (
         {k: v for k, v in yaml_files.items() if k.endswith((".yml", ".yaml"))}
         if isinstance(yaml_files, dict)
         else {}
     )
+
+    # If empty, check disk output directory
+    if not res:
+        output_path = state.get("project_output_path")
+        if output_path and Path(output_path).exists():
+            root_p = Path(output_path)
+            for p in root_p.rglob("*.yml"):
+                try:
+                    rel = str(p.relative_to(root_p)).replace("\\", "/")
+                    res[rel] = p.read_text(encoding="utf-8")
+                except Exception:
+                    pass
+            for p in root_p.rglob("*.yaml"):
+                try:
+                    rel = str(p.relative_to(root_p)).replace("\\", "/")
+                    res[rel] = p.read_text(encoding="utf-8")
+                except Exception:
+                    pass
+
+    return res
 
 
 def render_yaml_editor_page() -> None:

@@ -56,3 +56,11 @@ def test_database_crud(tmp_path):
     assert metrics["successful_validations"] == 1
     assert metrics["total_agent_executions"] == 1
 
+    # Test get_all_runs
+    runs = db.get_all_runs()
+    assert len(runs) == 1
+    assert runs[0]["project_name"] == "banking"
+    assert runs[0]["agents_completed"] == 1
+    assert runs[0]["validation_passed"] is True
+    assert runs[0]["status"] == "completed"
+

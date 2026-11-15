@@ -45,11 +45,16 @@ def _build_tree(root_path: str) -> dict[str, Any]:
         return {"name": root.name, "type": "dir", "path": str(root), "children": []}
 
     def _walk(p: Path) -> dict[str, Any]:
+        try:
+            rel_path = str(p.relative_to(root)).replace("\\", "/")
+        except ValueError:
+            rel_path = str(p).replace("\\", "/")
+
         if p.is_file():
             return {
                 "name": p.name,
                 "type": "file",
-                "path": str(p),
+                "path": rel_path,
                 "size": p.stat().st_size,
             }
         children = []
@@ -64,7 +69,7 @@ def _build_tree(root_path: str) -> dict[str, Any]:
         return {
             "name": p.name,
             "type": "dir",
-            "path": str(p),
+            "path": rel_path,
             "children": children,
         }
 

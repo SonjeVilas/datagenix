@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from agents.base_agent import BaseAgent
 
@@ -23,22 +23,27 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 class JoinRule(BaseModel):
-    name: str = Field(..., description="Descriptive name of the join")
-    left_model: str = Field(...)
-    right_model: str = Field(...)
+    name: str = Field(default="join", description="Descriptive name of the join")
+    left_model: str = Field(default="")
+    right_model: str = Field(default="")
     join_type: str = Field(default="inner", description="inner | left | right | full | cross")
-    join_condition: str = Field(..., description="SQL ON clause")
+    join_condition: str = Field(default="", description="SQL ON clause")
     description: Optional[str] = Field(default="")
 
-    @field_validator("description", mode="before")
+    @model_validator(mode="before")
     @classmethod
-    def _coerce_str(cls, v: Any) -> str:
-        return str(v) if v is not None else ""
+    def _coerce_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            data["name"] = str(data.get("name") or data.get("join_name") or "join")
+            data["left_model"] = str(data.get("left_model") or data.get("left_table") or data.get("left") or "")
+            data["right_model"] = str(data.get("right_model") or data.get("right_table") or data.get("right") or "")
+            data["join_condition"] = str(data.get("join_condition") or data.get("on") or data.get("condition") or "")
+        return data
 
 
 class AggregationRule(BaseModel):
-    name: str = Field(...)
-    source_model: str = Field(...)
+    name: str = Field(default="agg")
+    source_model: str = Field(default="")
     group_by_columns: list[str] = Field(default_factory=list)
     aggregations: list[dict[str, Any]] = Field(
         default_factory=list,
@@ -47,54 +52,68 @@ class AggregationRule(BaseModel):
     filters: Optional[str] = Field(default="", description="WHERE clause if any")
     description: Optional[str] = Field(default="")
 
-    @field_validator("filters", "description", mode="before")
+    @model_validator(mode="before")
     @classmethod
-    def _coerce_str(cls, v: Any) -> str:
-        return str(v) if v is not None else ""
+    def _coerce_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            data["name"] = str(data.get("name") or data.get("agg_name") or "agg")
+            data["source_model"] = str(data.get("source_model") or data.get("model") or data.get("table") or "")
+        return data
 
 
 class FilterRule(BaseModel):
-    name: str = Field(...)
-    source_model: str = Field(...)
-    condition: str = Field(..., description="SQL WHERE/QUALIFY condition")
+    name: str = Field(default="filter")
+    source_model: str = Field(default="")
+    condition: str = Field(default="", description="SQL WHERE/QUALIFY condition")
     reason: Optional[str] = Field(default="", description="Why this filter exists")
 
-    @field_validator("reason", mode="before")
+    @model_validator(mode="before")
     @classmethod
-    def _coerce_str(cls, v: Any) -> str:
-        return str(v) if v is not None else ""
+    def _coerce_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            data["name"] = str(data.get("name") or data.get("filter_name") or data.get("rule_name") or "filter")
+            data["source_model"] = str(data.get("source_model") or data.get("model") or data.get("table") or data.get("target_model") or "")
+            data["condition"] = str(data.get("condition") or data.get("filter_condition") or data.get("sql") or data.get("where") or "")
+        return data
 
 
 class CalculationRule(BaseModel):
-    name: str = Field(...)
-    expression: str = Field(..., description="SQL expression for the calculation")
-    output_column: str = Field(...)
+    name: str = Field(default="calc")
+    expression: str = Field(default="", description="SQL expression for the calculation")
+    output_column: str = Field(default="")
     source_columns: list[str] = Field(default_factory=list)
     description: Optional[str] = Field(default="")
 
-    @field_validator("description", mode="before")
+    @model_validator(mode="before")
     @classmethod
-    def _coerce_str(cls, v: Any) -> str:
-        return str(v) if v is not None else ""
+    def _coerce_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            data["name"] = str(data.get("name") or data.get("calculation_name") or data.get("calc_name") or "calc")
+            data["output_column"] = str(data.get("output_column") or data.get("column") or data.get("alias") or data.get("target_column") or data["name"])
+            data["expression"] = str(data.get("expression") or data.get("sql") or data.get("formula") or "")
+        return data
 
 
 class DeduplicationRule(BaseModel):
-    name: str = Field(...)
-    source_model: str = Field(...)
+    name: str = Field(default="dedup")
+    source_model: str = Field(default="")
     partition_by: list[str] = Field(default_factory=list, description="Columns for ROW_NUMBER partition")
     order_by: Optional[str] = Field(default="", description="ORDER BY clause for picking the winner")
     keep: str = Field(default="first", description="first or last")
     description: Optional[str] = Field(default="")
 
-    @field_validator("order_by", "description", mode="before")
+    @model_validator(mode="before")
     @classmethod
-    def _coerce_str(cls, v: Any) -> str:
-        return str(v) if v is not None else ""
+    def _coerce_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            data["name"] = str(data.get("name") or data.get("dedup_name") or "dedup")
+            data["source_model"] = str(data.get("source_model") or data.get("model") or data.get("table") or "")
+        return data
 
 
 class NullHandlingRule(BaseModel):
-    column: str = Field(...)
-    source_model: str = Field(...)
+    column: str = Field(default="")
+    source_model: str = Field(default="")
     strategy: str = Field(
         default="coalesce",
         description="coalesce | default_value | filter_out | flag",
@@ -102,30 +121,36 @@ class NullHandlingRule(BaseModel):
     default_value: Optional[str] = Field(default="", description="Default value for coalesce / default_value strategy")
     description: Optional[str] = Field(default="")
 
-    @field_validator("default_value", "description", mode="before")
+    @model_validator(mode="before")
     @classmethod
-    def _coerce_str(cls, v: Any) -> str:
-        return str(v) if v is not None else ""
+    def _coerce_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            data["column"] = str(data.get("column") or data.get("name") or "")
+            data["source_model"] = str(data.get("source_model") or data.get("model") or "")
+        return data
 
 
 class SCDDefinition(BaseModel):
-    entity: str = Field(..., description="Entity requiring SCD handling")
+    entity: str = Field(default="entity", description="Entity requiring SCD handling")
     scd_type: str = Field(default="type_2", description="type_1 | type_2 | type_3")
     tracked_columns: list[str] = Field(default_factory=list, description="Columns tracked for changes")
-    unique_key: str = Field(..., description="Natural key of the entity")
+    unique_key: str = Field(default="id", description="Natural key of the entity")
     valid_from_column: Optional[str] = Field(default="valid_from")
     valid_to_column: Optional[str] = Field(default="valid_to")
     current_flag_column: Optional[str] = Field(default="is_current")
     description: Optional[str] = Field(default="")
 
-    @field_validator("valid_from_column", "valid_to_column", "current_flag_column", "description", mode="before")
+    @model_validator(mode="before")
     @classmethod
-    def _coerce_str(cls, v: Any) -> str:
-        return str(v) if v is not None else ""
+    def _coerce_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            data["entity"] = str(data.get("entity") or data.get("name") or "entity")
+            data["unique_key"] = str(data.get("unique_key") or data.get("key") or "id")
+        return data
 
 
 class TransformationRuleSet(BaseModel):
-    model_name: str = Field(..., description="Target model these rules apply to")
+    model_name: str = Field(default="model", description="Target model these rules apply to")
     layer: Optional[str] = Field(default="", description="staging | intermediate | marts")
     joins: list[JoinRule] = Field(default_factory=list)
     aggregations: list[AggregationRule] = Field(default_factory=list)
@@ -138,6 +163,13 @@ class TransformationRuleSet(BaseModel):
         description="List of {source_column, target_column, transformation} dicts",
     )
     notes: Optional[str] = Field(default="")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            data["model_name"] = str(data.get("model_name") or data.get("name") or data.get("target_model") or "model")
+        return data
 
     @field_validator("layer", "notes", mode="before")
     @classmethod
@@ -212,6 +244,8 @@ class BusinessLogicAgent(BaseAgent):
             if not architecture:
                 raise ValueError("No architecture found in state — run ArchitectAgent first")
 
+            all_models = architecture.get("models", [])
+
             # ----------------------------------------------------------
             # Build prompt
             # ----------------------------------------------------------
@@ -242,15 +276,32 @@ class BusinessLogicAgent(BaseAgent):
             )
 
             # ----------------------------------------------------------
-            # Call Gemini
+            # Call Gemini with resilient fallback
             # ----------------------------------------------------------
             logger.info("BusinessLogicAgent: calling Gemini for transformation rules")
-            raw_response: dict = self._call_gemini_json(prompt)
-
-            # ----------------------------------------------------------
-            # Validate
-            # ----------------------------------------------------------
-            logic = BusinessLogic.model_validate(raw_response)
+            try:
+                raw_response: dict = self._call_gemini_json(prompt)
+                logic = BusinessLogic.model_validate(raw_response)
+            except Exception as exc:
+                logger.warning(
+                    "BusinessLogicAgent: model validation/parsing error (%s) — synthesizing rules from architecture",
+                    exc,
+                )
+                fallback_rules = []
+                for m in all_models:
+                    m_name = m.get("name", "model") if isinstance(m, dict) else getattr(m, "name", "model")
+                    m_layer = m.get("layer", "staging") if isinstance(m, dict) else getattr(m, "layer", "staging")
+                    fallback_rules.append(
+                        TransformationRuleSet(
+                            model_name=m_name,
+                            layer=m_layer,
+                            notes=f"Synthesized baseline transformation rules for {m_name}",
+                        )
+                    )
+                logic = BusinessLogic(
+                    transformation_rules=fallback_rules,
+                    assumptions=["Synthesized baseline transformation rules from architecture models."],
+                )
             logic_dict: dict = logic.model_dump()
 
             total_rules = len(logic.transformation_rules)

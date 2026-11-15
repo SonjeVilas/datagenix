@@ -87,8 +87,8 @@ def render_settings_page() -> None:
                 key="set_gemini_key",
             )
         with col2:
-            model_options = ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-2.5-pro"]
-            current_model = current.get("gemini_model", "gemini-3.5-flash")
+            model_options = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.8-flash"]
+            current_model = current.get("gemini_model", "gemini-3.5-flash-lite")
             default_index = model_options.index(current_model) if current_model in model_options else 0
             gemini_model = st.selectbox(
                 "Gemini Model",
@@ -329,8 +329,10 @@ def _test_snowflake_connection() -> None:
                     schema=schema or "",
                 )
                 if client.test_connection():
+                    st.session_state["snowflake_connected"] = True
                     st.success("✅ Snowflake connection successful!", icon="❄️")
                 else:
+                    st.session_state["snowflake_connected"] = False
                     st.error("❌ Snowflake connection test returned False.", icon="❌")
             except Exception as e:
                 st.error(f"❌ Snowflake connection failed: {e}", icon="❌")
