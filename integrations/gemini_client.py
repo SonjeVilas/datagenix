@@ -13,6 +13,7 @@ from google.genai import types
 from pydantic import SecretStr
 from tenacity import (
     retry,
+    retry_if_exception,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
@@ -26,6 +27,15 @@ logger = logging.getLogger(__name__)
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*\n?(.*?)\n?\s*```", re.DOTALL)
 
 
+def _should_retry_gemini(exc: BaseException) -> bool:
+    """Check if the Gemini exception is transient and worth retrying."""
+    msg = str(exc).lower()
+    if "per day limit exceeded" in msg or "free_tier_requests" in msg:
+        # Do not retry on daily quota exhaustion; switch to fallback model immediately
+        return False
+    return True
+
+
 def _gemini_wait(retry_state: Any) -> float:
     """Smart backoff that respects Gemini 429 retry-after recommendations."""
     exc = retry_state.outcome.exception() if retry_state.outcome else None
@@ -36,6 +46,8 @@ def _gemini_wait(retry_state: Any) -> float:
             match = re.search(r"retryDelay': '(\d+)s", msg)
         if match:
             delay = float(match.group(1)) + 1.5
+            if delay > 120.0:
+                return 0.1
             logger.info("Rate limit hit: backing off for %.1fs as specified by API", delay)
             return max(1.0, min(delay, 60.0))
         if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
@@ -124,9 +136,55 @@ class GeminiClient:
 
     # ── internals ───────────────────────────────────────────────────────
 
+    def _call(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        response_schema: Optional[Type] = None,
+        force_json: bool = False,
+    ) -> str:
+        """Call Gemini with automatic fallback on quota exhaustion (429) or server errors (503)."""
+        fallback_models = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.5-flash"]
+        candidate_models = [self.model_name] + [m for m in fallback_models if m != self.model_name]
+
+        last_exc: Optional[Exception] = None
+        for idx, model_candidate in enumerate(candidate_models):
+            try:
+                return self._call_single_model(
+                    model_candidate=model_candidate,
+                    prompt=prompt,
+                    system_prompt=system_prompt,
+                    response_schema=response_schema,
+                    force_json=force_json,
+                )
+            except Exception as exc:
+                last_exc = exc
+                err_msg = str(exc)
+                is_quota_or_server_err = (
+                    "429" in err_msg
+                    or "RESOURCE_EXHAUSTED" in err_msg
+                    or "503" in err_msg
+                    or "UNAVAILABLE" in err_msg
+                )
+                if is_quota_or_server_err and idx < len(candidate_models) - 1:
+                    next_model = candidate_models[idx + 1]
+                    logger.warning(
+                        "Model '%s' hit quota/server issue (%s). Automatically switching to fallback model '%s'...",
+                        model_candidate,
+                        type(exc).__name__,
+                        next_model,
+                    )
+                    self.model_name = next_model
+                    continue
+                raise
+
+        if last_exc:
+            raise last_exc
+        raise RuntimeError("All Gemini model attempts failed")
+
     @retry(
-        retry=retry_if_exception_type((Exception,)),
-        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type((Exception,)) & retry_if_exception(_should_retry_gemini),
+        stop=stop_after_attempt(3),
         wait=_gemini_wait,
         reraise=True,
         before_sleep=lambda rs: logger.warning(
@@ -135,14 +193,15 @@ class GeminiClient:
             rs.outcome.exception() if rs.outcome else "unknown",
         ),
     )
-    def _call(
+    def _call_single_model(
         self,
+        model_candidate: str,
         prompt: str,
         system_prompt: Optional[str] = None,
         response_schema: Optional[Type] = None,
         force_json: bool = False,
     ) -> str:
-        """Low-level Gemini API call with tenacity retry."""
+        """Low-level Gemini API call for a specific model candidate."""
         config_kwargs: Dict[str, Any] = {}
         if system_prompt:
             config_kwargs["system_instruction"] = system_prompt
@@ -156,14 +215,14 @@ class GeminiClient:
 
         logger.debug(
             "Gemini request  model=%s  prompt_len=%d  system_len=%d",
-            self.model_name,
+            model_candidate,
             len(prompt),
             len(system_prompt or ""),
         )
 
         t0 = time.time()
         response = self.client.models.generate_content(
-            model=self.model_name,
+            model=model_candidate,
             contents=prompt,
             config=config,
         )
@@ -174,7 +233,7 @@ class GeminiClient:
 
         logger.info(
             "Gemini response  model=%s  chars=%d  elapsed=%.1fs",
-            self.model_name,
+            model_candidate,
             len(response.text),
             elapsed,
         )
