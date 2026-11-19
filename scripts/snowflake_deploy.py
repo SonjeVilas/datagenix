@@ -37,14 +37,21 @@ def get_env(name: str, required: bool = True) -> str:
     return val
 
 
+# ── Try loading .env for local runs ──────────────────────────────────
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # ── Configuration ────────────────────────────────────────────────────
 ACCOUNT = get_env("SNOWFLAKE_ACCOUNT")
 USER = get_env("SNOWFLAKE_USER")
 PASSWORD = get_env("SNOWFLAKE_PASSWORD")
-ROLE = get_env("SNOWFLAKE_ROLE")
-WAREHOUSE = get_env("SNOWFLAKE_WAREHOUSE")
-DATABASE = get_env("SNOWFLAKE_DATABASE")
-GITHUB_REPO_URL = get_env("GITHUB_REPO_URL")
+ROLE = get_env("SNOWFLAKE_ROLE", required=False) or "ACCOUNTADMIN"
+WAREHOUSE = get_env("SNOWFLAKE_WAREHOUSE", required=False) or "COMPUTE_WH"
+DATABASE = get_env("SNOWFLAKE_DATABASE", required=False) or "ECOM_DB"
+GITHUB_REPO_URL = get_env("GITHUB_REPO_URL", required=False) or "https://github.com/SonjeVilas/dbt-project-factory.git"
 
 # Snowflake object names
 SCHEMA = "RAW"
@@ -137,10 +144,10 @@ def main():
         # ── Step 4: Verify branch exists ─────────────────────────────
         branches = execute_sql(
             cur,
-            f"SHOW BRANCHES IN GIT REPOSITORY {FQ_GIT_REPO}",
+            f"SHOW GIT BRANCHES IN GIT REPOSITORY {FQ_GIT_REPO}",
             "List branches in Git repository",
         )
-        branch_names = [row[1] if len(row) > 1 else str(row) for row in branches]
+        branch_names = [row[0] if len(row) > 0 else str(row) for row in branches]
         print(f"📂 Available branches: {branch_names}")
 
         # ── Step 5: Create/Replace dbt Project ──────────────────────
