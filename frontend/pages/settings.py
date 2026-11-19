@@ -29,7 +29,7 @@ def _load_settings() -> dict[str, Any]:
     """Load current settings."""
     defaults = {
         "gemini_api_key": "",
-        "gemini_model": "gemini-3.5-flash-lite",
+        "gemini_model": "gemini-3.8-flash",
         "snowflake_account": "",
         "snowflake_user": "",
         "snowflake_password": "",
@@ -87,8 +87,8 @@ def render_settings_page() -> None:
                 key="set_gemini_key",
             )
         with col2:
-            model_options = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.8-flash"]
-            current_model = current.get("gemini_model", "gemini-3.5-flash-lite")
+            model_options = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"]
+            current_model = current.get("gemini_model", "gemini-3.8-flash")
             default_index = model_options.index(current_model) if current_model in model_options else 0
             gemini_model = st.selectbox(
                 "Gemini Model",
@@ -290,7 +290,7 @@ def _test_gemini_connection() -> None:
             from config.settings import get_settings
             model = get_settings().gemini_model
         except Exception:
-            model = "gemini-3.5-flash-lite"
+            model = "gemini-3.8-flash"
 
     if GeminiClient is not None:
         with st.spinner(f"Testing Gemini connection with model '{model}'..."):

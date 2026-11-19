@@ -98,7 +98,6 @@ class DbtRunner:
         try:
             from config.settings import get_settings
             s = get_settings()
-            pwd = s.snowflake_password.get_secret_value() if hasattr(s.snowflake_password, 'get_secret_value') else str(s.snowflake_password)
             proj_name = self.project_dir.name
 
             content = (
@@ -107,13 +106,13 @@ class DbtRunner:
                 f"  outputs:\n"
                 f"    dev:\n"
                 f"      type: snowflake\n"
-                f"      account: {s.snowflake_account}\n"
-                f"      user: {s.snowflake_user}\n"
-                f"      password: '{pwd}'\n"
-                f"      role: {s.snowflake_role or 'ACCOUNTADMIN'}\n"
-                f"      database: {s.snowflake_database or 'ECOM_DB'}\n"
-                f"      warehouse: {s.snowflake_warehouse or 'COMPUTE_WH'}\n"
-                f"      schema: {s.snowflake_schema or 'RAW'}\n"
+                f"      account: \"{{{{ env_var('SNOWFLAKE_ACCOUNT', '{s.snowflake_account}') }}}}\"\n"
+                f"      user: \"{{{{ env_var('SNOWFLAKE_USER', '{s.snowflake_user}') }}}}\"\n"
+                f"      password: \"{{{{ env_var('SNOWFLAKE_PASSWORD', '') }}}}\"\n"
+                f"      role: \"{{{{ env_var('SNOWFLAKE_ROLE', '{s.snowflake_role or 'ACCOUNTADMIN'}') }}}}\"\n"
+                f"      database: \"{{{{ env_var('SNOWFLAKE_DATABASE', '{s.snowflake_database or 'ECOM_DB'}') }}}}\"\n"
+                f"      warehouse: \"{{{{ env_var('SNOWFLAKE_WAREHOUSE', '{s.snowflake_warehouse or 'COMPUTE_WH'}') }}}}\"\n"
+                f"      schema: \"{{{{ env_var('SNOWFLAKE_SCHEMA', '{s.snowflake_schema or 'RAW'}') }}}}\"\n"
                 f"      threads: 4\n"
                 f"      client_session_keep_alive: false\n"
             )

@@ -8,7 +8,7 @@ from config.settings import Settings
 
 def test_settings_defaults():
     settings = Settings(_env_file=None)
-    assert settings.gemini_model == "gemini-3.5-flash-lite"
+    assert settings.gemini_model == "gemini-3.8-flash"
     assert settings.max_retries == 3
     assert settings.log_level == "INFO"
     assert settings.project_output_dir == "generated_projects"
