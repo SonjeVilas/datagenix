@@ -18,7 +18,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 # ── Mask secrets in GitHub Actions logs ──────────────────────────────
 MASKED_KEYS = ["SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PASSWORD"]
@@ -110,7 +110,7 @@ def step_summary(title: str, body: str):
 
 def main():
     results_log = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "status": "started",
         "steps": [],
     }
@@ -199,7 +199,7 @@ def main():
 
         step_summary(
             "🚀 Snowflake Deployment",
-            f"✅ **Deployment successful** at `{datetime.utcnow().isoformat()}`\n\n"
+            f"✅ **Deployment successful** at `{datetime.now(timezone.utc).isoformat()}`\n\n"
             f"| Step | Status |\n|------|--------|\n"
             + "\n".join(
                 f"| {s['step']} | ✅ {s['status']} |"
@@ -214,7 +214,7 @@ def main():
 
         step_summary(
             "🚀 Snowflake Deployment",
-            f"❌ **Deployment failed** at `{datetime.utcnow().isoformat()}`\n\n"
+            f"❌ **Deployment failed** at `{datetime.now(timezone.utc).isoformat()}`\n\n"
             f"**Error:** `{e}`\n\n"
             f"| Step | Status |\n|------|--------|\n"
             + "\n".join(

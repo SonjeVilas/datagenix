@@ -28,7 +28,6 @@ generated_projects/*
 generated_projects/retail_dbt_v1/profiles.yml
 generated_projects/retail_dbt_v1/logs/
 generated_projects/retail_dbt_v1/target/
-generated_projects/retail_dbt_v1/dbt_packages/
 generated_projects/retail_dbt_v1/.user.yml
 storage/*
 !storage/.gitkeep
