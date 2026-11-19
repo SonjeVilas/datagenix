@@ -1,0 +1,97 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: "Customer dimension table containing demographic info and lifetime order metrics at a grain of one row per customer_id."
+    config:
+      tags: ['marts', 'dimension', 'customers']
+    columns:
+      - name: customer_id
+        description: "Unique identifier for each customer."
+        data_type: NUMBER
+        tests:
+          - unique
+          - not_null
+
+      - name: first_name
+        description: "Customer's standardized first name."
+        data_type: TEXT
+
+      - name: last_name
+        description: "Customer's standardized last name."
+        data_type: TEXT
+
+      - name: email
+        description: "Customer's lowercased email address."
+        data_type: TEXT
+
+      - name: created_at
+        description: "Timestamp when the customer record was created."
+        data_type: TIMESTAMP_NTZ
+
+      - name: total_orders
+        description: "Total number of orders placed by the customer (defaulted to 0 if none)."
+        data_type: NUMBER
+        tests:
+          - not_null
+
+      - name: total_spend
+        description: "Total monetary amount spent by the customer across all orders (defaulted to 0.00 if none)."
+        data_type: NUMBER
+        tests:
+          - not_null
+
+      - name: standard_timestamp
+        description: "Audit timestamp capturing when the dimension record was generated."
+        data_type: TIMESTAMP_NTZ
+
+  - name: fct_orders
+    description: "Order fact table containing individual transaction metrics, order status, and completion flag at a grain of one row per order_id."
+    config:
+      tags: ['marts', 'fact', 'orders']
+    columns:
+      - name: order_id
+        description: "Unique identifier for each order."
+        data_type: NUMBER
+        tests:
+          - unique
+          - not_null
+
+      - name: customer_id
+        description: "Identifier of the customer who placed the order."
+        data_type: NUMBER
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customers')
+              field: customer_id
+
+      - name: order_date
+        description: "Date when the order was placed."
+        data_type: DATE
+        tests:
+          - not_null
+
+      - name: status
+        description: "Current status of the order."
+        data_type: TEXT
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['pending', 'completed', 'shipped', 'cancelled', 'returned']
+
+      - name: total_amount
+        description: "Total monetary amount for the order."
+        data_type: NUMBER
+        tests:
+          - not_null
+
+      - name: is_completed
+        description: "Boolean flag indicating whether the order status is completed (true when status = 'completed', otherwise false)."
+        data_type: BOOLEAN
+        tests:
+          - not_null
+
+      - name: standard_timestamp
+        description: "Audit timestamp capturing when the fact record was generated."
+        data_type: TIMESTAMP_NTZ

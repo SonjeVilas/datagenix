@@ -1,0 +1,102 @@
+version: 2
+
+models:
+  - name: stg_ecom__customers
+    description: "Staging model for raw ECOM_DB.RAW.CUSTOMERS. Standardizes names and lowercases email addresses."
+    config:
+      tags: ['staging', 'ecom', 'customers']
+    columns:
+      - name: customer_id
+        description: "Unique identifier for each customer."
+        data_type: NUMBER
+        tests:
+          - unique
+          - not_null
+      - name: first_name
+        description: "Customer's first name, standardized to proper casing and trimmed of whitespace."
+        data_type: TEXT
+        tests:
+          - not_null
+      - name: last_name
+        description: "Customer's last name, standardized to proper casing and trimmed of whitespace."
+        data_type: TEXT
+        tests:
+          - not_null
+      - name: email
+        description: "Customer's email address, normalized to lowercase."
+        data_type: TEXT
+      - name: created_at
+        description: "Timestamp when the customer record was created, cast to TIMESTAMP_NTZ."
+        data_type: TIMESTAMP_NTZ
+      - name: standard_timestamp
+        description: "Audit timestamp capturing when the staging record was transformed."
+        data_type: TIMESTAMP_NTZ
+
+  - name: stg_ecom__orders
+    description: "Staging model for raw ECOM_DB.RAW.ORDERS. Cleans types and casts monetary values."
+    config:
+      tags: ['staging', 'ecom', 'orders']
+    columns:
+      - name: order_id
+        description: "Unique identifier for each order."
+        data_type: NUMBER
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: "Identifier of the customer who placed the order."
+        data_type: NUMBER
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_ecom__customers')
+              field: customer_id
+      - name: order_date
+        description: "Date when the order was placed, cast to DATE."
+        data_type: DATE
+      - name: status
+        description: "Current status of the order, normalized to lowercase."
+        data_type: TEXT
+        tests:
+          - accepted_values:
+              values: ['pending', 'completed', 'cancelled', 'shipped']
+      - name: total_amount
+        description: "Total monetary amount for the order, cast to NUMBER(10,2)."
+        data_type: NUMBER
+      - name: standard_timestamp
+        description: "Audit timestamp capturing when the staging record was transformed."
+        data_type: TIMESTAMP_NTZ
+
+  - name: stg_ecom__order_items
+    description: "Staging model for raw ECOM_DB.RAW.ORDER_ITEMS. Standardizes line-item quantities and prices."
+    config:
+      tags: ['staging', 'ecom', 'order_items']
+    columns:
+      - name: item_id
+        description: "Unique identifier for each order item."
+        data_type: NUMBER
+        tests:
+          - unique
+          - not_null
+      - name: order_id
+        description: "Identifier of the parent order."
+        data_type: NUMBER
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_ecom__orders')
+              field: order_id
+      - name: product_id
+        description: "Identifier of the product being ordered."
+        data_type: NUMBER
+        tests:
+          - not_null
+      - name: quantity
+        description: "Quantity of the product ordered, defaulted to 0 if null."
+        data_type: NUMBER
+      - name: unit_price
+        description: "Unit price of the product, cast to NUMBER(10,2)."
+        data_type: NUMBER
+      - name: standard_timestamp
+        description: "Audit timestamp capturing when the staging record was transformed."
+        data_type: TIMESTAMP_NTZ

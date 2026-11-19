@@ -1,0 +1,65 @@
+# ──────────────────────────────────────────────────────────────────────
+# CD Pipeline – dbt Project Factory
+# Runs ONLY after code is merged into 'main'.
+# Deploys to Snowflake using native Git integration & dbt Projects.
+# ──────────────────────────────────────────────────────────────────────
+
+name: "CD – Deploy to Snowflake"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "generated_projects/retail_dbt_v1/**"
+      - "scripts/snowflake_deploy.py"
+      - ".github/workflows/cd.yml"
+
+concurrency:
+  group: cd-main
+  cancel-in-progress: false   # never cancel an in-progress deployment
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  deploy:
+    name: "🚀 Deploy dbt to Snowflake"
+    runs-on: ubuntu-latest
+    environment: production     # optional: requires environment approval in GitHub
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install snowflake-connector-python
+
+      - name: Mask Snowflake credentials
+        run: |
+          echo "::add-mask::${{ secrets.SNOWFLAKE_ACCOUNT }}"
+          echo "::add-mask::${{ secrets.SNOWFLAKE_USER }}"
+          echo "::add-mask::${{ secrets.SNOWFLAKE_PASSWORD }}"
+
+      - name: Deploy to Snowflake
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+          GITHUB_REPO_URL: "https://github.com/SonjeVilas/dbt-project-factory.git"
+        run: python scripts/snowflake_deploy.py
+
+      - name: Upload deployment logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snowflake-deploy-logs
+          path: deploy_results.json
+          retention-days: 30

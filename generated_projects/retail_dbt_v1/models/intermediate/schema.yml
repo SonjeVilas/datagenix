@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: int_customers__aggregated_metrics
+    description: "Intermediate ephemeral model aggregating total order counts and lifetime spend per customer from valid orders."
+    config:
+      tags: ['intermediate', 'customers']
+    columns:
+      - name: customer_id
+        description: "Unique identifier for each customer."
+        data_type: NUMBER
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              to: ref('stg_ecom__customers')
+              field: customer_id
+      - name: total_orders
+        description: "Total count of orders placed by the customer."
+        data_type: NUMBER
+        tests:
+          - not_null
+      - name: total_spend
+        description: "Total monetary spend accumulated by the customer across all orders."
+        data_type: NUMBER
+        tests:
+          - not_null

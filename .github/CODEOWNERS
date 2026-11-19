@@ -1,0 +1,6 @@
+# ──────────────────────────────────────────────────────────────────────
+# CODEOWNERS – dbt Project Factory
+# All changes require approval from @SonjeVilas before merging.
+# ──────────────────────────────────────────────────────────────────────
+
+* @SonjeVilas
