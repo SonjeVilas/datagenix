@@ -175,7 +175,7 @@ jobs:
 
               # 4. dbt build
               print(f"🚀 [{item}] running dbt build...")
-              res_build = subprocess.run(["dbt", "build", "--profiles-dir", ".", "--fail-fast"], cwd=proj_dir, capture_output=True, text=True)
+              res_build = subprocess.run(["dbt", "build", "--profiles-dir", ".", "--fail-fast", "--full-refresh"], cwd=proj_dir, capture_output=True, text=True)
               print(res_build.stdout)
               if res_build.returncode != 0:
                   print(res_build.stderr)

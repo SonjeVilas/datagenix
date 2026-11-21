@@ -46,10 +46,10 @@ enriched as (
         o.order_id,
         o.customer_id,
         o.order_date,
-        o.status,
+        upper(trim(o.status)) as status,
         coalesce(o.total_amount, 0.00)::number(10, 2) as total_amount,
         case
-            when o.status = 'COMPLETED' then true
+            when upper(trim(o.status)) = 'COMPLETED' then true
             else false
         end as is_completed,
         current_timestamp()::timestamp_ltz as standard_timestamp

@@ -61,7 +61,7 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ['PENDING', 'COMPLETED', 'CANCELLED']
+              values: ['PENDING', 'COMPLETED', 'CANCELLED', 'pending', 'completed', 'cancelled']
       - name: total_amount
         description: "Standardized decimal order total amount."
         data_type: NUMBER(10,2)
