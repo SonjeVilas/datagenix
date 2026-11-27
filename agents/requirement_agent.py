@@ -1,5 +1,5 @@
 """
-Requirement Analysis Agent for dbt Project Factory.
+Requirement Analysis Agent for Datagenix.
 
 Parses business requirements text via Gemini and outputs a structured
 project specification including objectives, source systems, business entities,

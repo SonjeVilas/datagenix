@@ -296,7 +296,7 @@ def _test_gemini_connection() -> None:
         with st.spinner(f"Testing Gemini connection with model '{model}'..."):
             try:
                 client = GeminiClient(api_key=api_key, model=model)
-                response = client.generate("Say 'Hello, dbt Project Factory!' in one sentence.", system_prompt="You are a helpful assistant.")
+                response = client.generate("Say 'Hello, Datagenix!' in one sentence.", system_prompt="You are a helpful assistant.")
                 st.session_state["gemini_test_feedback"] = (
                     "success",
                     f"✅ Gemini connected successfully using model `{model}`!\n\n**Response:** {response[:200]}",

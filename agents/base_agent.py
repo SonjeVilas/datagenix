@@ -1,4 +1,4 @@
-"""Base Agent interface for all specialized dbt Project Factory agents."""
+"""Base Agent interface for all specialized Datagenix agents."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaseAgent(ABC):
-    """Abstract base class for all dbt Project Factory agents.
+    """Abstract base class for all Datagenix agents.
 
     Provides common Gemini client access, state status updates,
     and structured error handling.

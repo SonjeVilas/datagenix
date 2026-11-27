@@ -1,4 +1,4 @@
-"""Top-level Streamlit launcher for dbt Project Factory."""
+"""Top-level Streamlit launcher for Datagenix."""
 
 from frontend.dashboard import main
 

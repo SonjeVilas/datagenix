@@ -1,5 +1,5 @@
 """
-Data Architect Agent for dbt Project Factory.
+Data Architect Agent for Datagenix.
 
 Designs the full dbt project architecture: layer structure (staging,
 intermediate, marts), model inventory with naming conventions, materialization

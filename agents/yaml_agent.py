@@ -1,5 +1,5 @@
 """
-YAML Developer Agent for dbt Project Factory.
+YAML Developer Agent for Datagenix.
 
 Generates all YAML configuration files required by a dbt project:
 dbt_project.yml, sources.yml, schema.yml per layer, packages.yml, and

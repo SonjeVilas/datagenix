@@ -1,5 +1,5 @@
 """
-Data Discovery Agent for dbt Project Factory.
+Data Discovery Agent for Datagenix.
 
 Connects to Snowflake (when available) or uses manually-supplied metadata to
 build a comprehensive source catalog describing tables, columns, data types,

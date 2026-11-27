@@ -1,4 +1,4 @@
-"""Style loader for dbt Project Factory dashboard."""
+"""Style loader for the Datagenix dashboard."""
 
 import os
 import streamlit as st

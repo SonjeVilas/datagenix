@@ -1,5 +1,5 @@
 """
-SQL Developer Agent for dbt Project Factory.
+SQL Developer Agent for Datagenix.
 
 Generates production-ready dbt SQL model files using CTE structure, source()
 and ref() macros, Snowflake dialect, and proper materializations. Outputs a
