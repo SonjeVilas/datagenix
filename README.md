@@ -1,29 +1,31 @@
-# 🏭 dbt Project Factory – Multi-Agent AI Data Engineering Platform
+# 🏭 Datagenix – Multi-Agent AI dbt Engineering Platform
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![LangGraph](https://img.shields.io/badge/orchestration-LangGraph-orange.svg)](https://github.com/langchain-ai/langgraph)
 [![Google Gemini](https://img.shields.io/badge/AI-Google%20Gemini%20API-4285F4.svg)](https://ai.google.dev/)
 [![dbt Core](https://img.shields.io/badge/data--transform-dbt--core%20%7C%20Snowflake-FF694B.svg)](https://www.getdbt.com/)
 [![Tests](https://img.shields.io/badge/tests-pytest%20passing-green.svg)](https://pytest.org/)
 
-An enterprise-grade, locally runnable AI system that autonomously creates complete, production-ready **dbt (data build tool)** projects for **Snowflake** from natural-language business requirements.
+**Datagenix** is an open-source, locally runnable multi-agent AI platform that autonomously designs, builds, validates, and packages production-ready **dbt (data build tool)** projects for **Snowflake** from natural-language business requirements.
 
-Powered by **Google Gemini** models and orchestrated via **LangGraph**, the system employs a team of 11 specialized AI agents that analyze requirements, discover source structures, design dimensional architectures, generate modular SQL CTEs, configure YAML schemas & sources, implement robust data quality tests, perform static/AST validation, and self-heal errors before packaging.
+Powered by **Google Gemini** models (with automatic multi-model fallback) and orchestrated via **LangGraph**, Datagenix employs 11 specialized AI agents that analyze requirements, discover source schemas, architect dimensional layers, write modular Snowflake SQL CTEs, generate YAML configs & tests, perform static/AST validation, self-heal errors, and package ready-to-deploy dbt repositories.
 
 ---
 
 ## 🌟 Key Capabilities
 
-- **Autonomous Multi-Agent Workflow**: 11 dedicated AI agents operating with distinct system prompts and Pydantic-validated JSON contracts.
+- **Autonomous Multi-Agent Workflow**: 11 dedicated AI agents operating with structured system prompts and Pydantic-validated JSON contracts.
 - **Dimensional dbt Architecture**: Standardizes projects into **Staging** (`stg_`), **Intermediate** (`int_`), and **Marts** (`dim_`, `fct_`) layers following dbt and Snowflake best practices.
-- **Snowflake-Native SQL Generation**: Employs CTE structures, `source()` / `ref()` macros, incremental merge/append patterns, and window functions without hallucinated columns.
+- **Snowflake-Native SQL Generation**: Employs clean CTE structures, `source()` / `ref()` macros, incremental merge/append strategies, and window functions grounded in discovered schemas.
 - **Automated Quality Testing**: Generates schema tests (`unique`, `not_null`, `relationships`, `accepted_values`) and `dbt-utils` macro tests tailored to actual column semantics.
-- **Self-Healing Error Correction**: Detects syntax flaws, broken refs, or circular dependencies through static AST validation and iteratively patches affected files with rollback backups (up to configurable retry limits).
+- **Self-Healing Error Correction**: Detects SQL syntax flaws, broken refs, or circular dependencies via `sqlglot` AST validation and iteratively patches affected files with rollback backups.
+- **Resilient Gemini Client**: Automatic fallback across `gemini-3.8-flash` → `gemini-3.5-flash-lite` → `gemini-3.5-flash` on quota exhaustion (`429`) or transient server errors (`503`).
 - **Dual Operating Modes**:
-  - **Live Snowflake Discovery**: Connects securely to discover live databases, schemas, tables, and constraints.
+  - **Live Snowflake Discovery**: Connects securely to inspect live databases, schemas, tables, and constraints.
   - **Offline / Air-Gapped Mode**: Ingests manual schema metadata via CSV, JSON, or YAML without requiring warehouse credentials.
-- **Enterprise Streamlit Frontend**: Dark-themed dashboard with live agent workflow visualization, visual project directory tree, in-browser SQL/YAML editors, validation center, and ZIP packaging.
-- **Security by Design**: Path-traversal sandboxing, secret masking in logs, read-only discovery, and human-in-the-loop approval gates before any warehouse execution.
+- **Enterprise Streamlit Frontend**: Dark-themed dashboard with live agent pipeline visualization, interactive project explorer, in-browser SQL/YAML editors, validation center, and ZIP packaging.
+- **Built-In CI/CD**: GitHub Actions workflows for Python unit testing, SQLFluff linting, dbt validation, and Snowflake native Git deployment (`CREATE DBT PROJECT` / `EXECUTE DBT PROJECT`).
 
 ---
 
@@ -113,7 +115,7 @@ Powered by **Google Gemini** models and orchestrated via **LangGraph**, the syst
 | 3 | **Data Architect** | Designs the dbt DAG, directory layers (staging, intermediate, marts), and materializations. | `architecture.json` |
 | 4 | **Business Logic** | Translates business rules into join specifications, deduplication, NULL handling, and SCDs. | `business_logic.json` |
 | 5 | **SQL Developer** | Writes Snowflake-optimized dbt models utilizing CTEs and Jinja `ref()` / `source()`. | `models/**/*.sql` |
-| 6 | **YAML Developer** | Generates `dbt_project.yml`, `sources.yml`, `schema.yml`, and `profiles.yml.example`. | `**/*.yml` |
+| 6 | **YAML Developer** | Generates `dbt_project.yml`, `sources.yml`, `schema.yml`, `packages.yml`, and `profiles.yml.example`. | `**/*.yml` |
 | 7 | **Data Quality** | Generates relevant primary key, foreign key, not-null, and `dbt-utils` assertion tests. | `tests/**/*.sql`, `schema.yml` |
 | 8 | **Documentation** | Produces descriptions, column dictionaries, business definitions, and project README. | `models/**/*.md`, `README.md` |
 | 9 | **QA & Validation** | Inspects models using `sqlglot`, YAML parsers, circular dependency checkers, and AST rules. | `qa_report.json` |
@@ -125,32 +127,39 @@ Powered by **Google Gemini** models and orchestrated via **LangGraph**, the syst
 ## 💻 Tech Stack
 
 - **Orchestration**: `LangGraph` (with `MemorySaver` checkpointing and conditional graph routing)
-- **AI Engine**: `google-genai` (Google Gemini 2.0 Flash / Pro)
+- **AI Engine**: `google-genai` (Google Gemini 3.8 Flash / 3.5 Flash / 3.5 Flash-Lite with auto-fallback)
 - **Data Engineering**: `dbt-core`, `dbt-snowflake`, `snowflake-connector-python`, `sqlglot`, `sqlfluff`
 - **Validation & Models**: `pydantic v2`, `pydantic-settings`, `pyyaml`
-- **Frontend Dashboard**: `Streamlit` (with custom CSS layout and responsive UI components)
+- **Frontend Dashboard**: `Streamlit` (custom dark CSS layout and responsive UI components)
 - **Local Storage**: `SQLite` (project executions, metadata, metrics, and error audit trail)
-- **Testing**: `pytest`
+- **Testing & CI/CD**: `pytest`, GitHub Actions, Snowflake Native Git Integration
 
 ---
 
 ## 🚀 Quickstart Guide
 
 ### 1. Prerequisites
-- Python **3.11+** installed (tested on Python 3.13)
+- Python **3.11+** installed (tested through Python 3.13)
 - Windows 10/11, macOS, or Linux
 - Google Gemini API Key ([Get one here](https://aistudio.google.com/))
 - *(Optional)* Snowflake account credentials
 
 ### 2. Installation
 
-Clone or navigate to the repository directory:
+Clone the repository and navigate into the project directory:
 ```bash
-cd "d:\AI-Powered Multi-Agent dbt Project Factory"
+git clone https://github.com/SonjeVilas/datagenix.git
+cd datagenix
 ```
 
-Install required dependencies:
+Create a virtual environment and install dependencies:
 ```bash
+python -m venv .venv
+# Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
+# macOS / Linux:
+source .venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
@@ -163,8 +172,8 @@ cp .env.example .env
 
 Edit `.env` and provide your Gemini API key:
 ```ini
-GEMINI_KEY=your_actual_gemini_api_key_here
-GEMINI_MODEL=gemini-3.5-flash
+GEMINI_API_KEY=your_actual_gemini_api_key_here
+GEMINI_MODEL=gemini-3.8-flash
 
 # Optional: Snowflake credentials for live discovery and execution
 SNOWFLAKE_ACCOUNT=
@@ -209,41 +218,54 @@ python main.py --name ecommerce_analytics --requirements "Build customer 360 and
 
 Or pass a requirements file:
 ```bash
-python main.py --name banking_analytics --requirements ./requirements_doc.txt --output-dir ./generated_projects
+python main.py --name banking_analytics --requirements ./sample_data/requirements.txt --output-dir ./generated_projects
 ```
 
 ---
 
 ## 🧪 Running Automated Tests
 
-The test suite runs 100% offline using mocked Gemini responses and requires no live credentials or API credits:
+The unit test suite runs **100% offline** using mocked Gemini responses and requires no live API keys or warehouse credentials:
 
 ```bash
 pytest tests/ -v
 ```
 
-All 29 tests validate:
-- Gemini client JSON parsing and retry policies
-- Pydantic state serialization
-- FileManager path-traversal sandboxing
+All **32 tests** validate:
+- Gemini client JSON parsing, retry policies, and model fallback
+- Pydantic state serialization & settings secret masking
+- `FileManager` path-traversal sandboxing
 - SQLite persistence and metrics aggregation
 - Static SQL and YAML validation with circular dependency detection
-- Agent execution workflows
+- Agent execution workflows & LangGraph orchestration
 - Subprocess safety with argument lists and timeout handling
+
+See [TESTING_GUIDE.md](TESTING_GUIDE.md) for a step-by-step end-to-end walkthrough and [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for Snowflake CI/CD deployment setup.
 
 ---
 
 ## 🔒 Security & Safe Execution Controls
 
-1. **Strict Path-Traversal Sandbox**: The `FileManager` verifies that all file reads and writes resolve strictly within designated output directories, preventing path-traversal attacks (`../../`).
-2. **Credential Masking**: API keys and database passwords are encapsulated inside Pydantic `SecretStr` models and automatically masked in log outputs.
+1. **Strict Path-Traversal Sandbox**: `FileManager` verifies that all file reads and writes resolve strictly within designated output directories, preventing path-traversal attacks (`../../`).
+2. **Credential Masking**: API keys and database passwords are encapsulated inside Pydantic `SecretStr` models and masked in log outputs.
 3. **No Automatic Production Runs**: Production deployment targets (`prod`, `production`) are hard-blocked from automated execution.
-4. **Human-in-the-Loop Warehouse Gates**: Database-affecting commands (`dbt run`, `dbt build`) enforce explicit human approval before any subprocess is spawned.
-5. **Subprocess Argument Lists**: All CLI operations use argument lists (`subprocess.run(["dbt", ...])`) instead of `shell=True` to eliminate shell injection vulnerabilities.
+4. **Human-in-the-Loop Warehouse Gates**: Database-affecting commands (`dbt run`, `dbt build`) enforce explicit approval before spawning subprocesses.
+5. **Subprocess Argument Lists**: CLI operations use argument lists (`subprocess.run(["dbt", ...])`) with `shell=False` to prevent command injection.
+
+See [SECURITY.md](SECURITY.md) for vulnerability reporting guidelines.
+
+---
+
+## 🤝 Contributing
+
+We welcome open-source contributions! Whether it's bug fixes, new dbt pattern templates, prompt engineering improvements, or additional data platform integrations:
+
+1. Check open [Issues](https://github.com/SonjeVilas/datagenix/issues) or open a new feature request / bug report.
+2. Read [CONTRIBUTING.md](CONTRIBUTING.md) and our [Code of Conduct](CODE_OF_CONDUCT.md).
+3. Fork the repository, create a feature branch, ensure `pytest tests/ -v` passes, and open a Pull Request!
 
 ---
 
 ## 📄 License
 
-MIT License. Designed and engineered for high-velocity data engineering teams.
-
+Licensed under the [MIT License](LICENSE). Built for the open-source data engineering community.

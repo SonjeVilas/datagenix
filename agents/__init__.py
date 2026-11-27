@@ -1,4 +1,4 @@
-"""Specialized agents for dbt Project Factory."""
+"""Specialized agents for Datagenix."""
 
 from agents.base_agent import BaseAgent
 from agents.requirement_agent import RequirementAgent

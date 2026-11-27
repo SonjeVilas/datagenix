@@ -1,4 +1,4 @@
-"""Frontend pages for dbt Project Factory."""
+"""Frontend pages for Datagenix."""
 
 from frontend.pages.ai_agents import render_agents_page
 from frontend.pages.data_sources import render_data_sources_page

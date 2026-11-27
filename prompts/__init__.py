@@ -1,4 +1,4 @@
-"""Prompt templates for dbt Project Factory agents."""
+"""Prompt templates for Datagenix agents."""
 
 from prompts.requirement_prompts import (
     REQUIREMENT_ANALYSIS_SYSTEM_PROMPT,

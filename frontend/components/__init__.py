@@ -1,4 +1,4 @@
-"""Reusable UI components for the dbt Project Factory dashboard."""
+"""Reusable UI components for the Datagenix dashboard."""
 
 from frontend.components.agent_card import render_agent_card, render_agent_grid
 from frontend.components.code_viewer import render_code_viewer, render_single_file

@@ -1,4 +1,4 @@
-"""CLI entry point for dbt Project Factory.
+"""CLI entry point for Datagenix.
 
 Run the end-to-end multi-agent pipeline directly from the command line.
 """
@@ -20,12 +20,12 @@ logging.basicConfig(
     format="%(asctime)s | %(name)-25s | %(levelname)-7s | %(message)s",
     datefmt="%H:%M:%S",
 )
-logger = logging.getLogger("dbt-factory-cli")
+logger = logging.getLogger("datagenix-cli")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="dbt Project Factory - Multi-Agent AI Data Engineering Platform"
+        description="Datagenix - Multi-Agent AI Data Engineering & dbt Platform"
     )
     parser.add_argument(
         "--name",
@@ -81,7 +81,7 @@ def main() -> None:
     if args.output_dir:
         settings.project_output_dir = args.output_dir
 
-    logger.info("Initializing dbt Project Factory for project: %s", args.name)
+    logger.info("Initializing Datagenix for project: %s", args.name)
     initial_state = ProjectState(
         project_name=args.name,
         project_description=args.description or f"dbt project for {args.name}",

@@ -1,4 +1,4 @@
-"""LangGraph-based multi-agent orchestrator for dbt Project Factory."""
+"""LangGraph-based multi-agent orchestrator for Datagenix."""
 
 from __future__ import annotations
 

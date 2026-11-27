@@ -51,12 +51,12 @@ PASSWORD = get_env("SNOWFLAKE_PASSWORD")
 ROLE = get_env("SNOWFLAKE_ROLE", required=False) or "ACCOUNTADMIN"
 WAREHOUSE = get_env("SNOWFLAKE_WAREHOUSE", required=False) or "COMPUTE_WH"
 DATABASE = get_env("SNOWFLAKE_DATABASE", required=False) or "ECOM_DB"
-GITHUB_REPO_URL = get_env("GITHUB_REPO_URL", required=False) or "https://github.com/SonjeVilas/dbt-project-factory.git"
+GITHUB_REPO_URL = get_env("GITHUB_REPO_URL", required=False) or "https://github.com/SonjeVilas/datagenix.git"
 
 # Snowflake object names
 SCHEMA = get_env("SNOWFLAKE_SCHEMA", required=False) or "RAW"
 API_INTEGRATION = os.environ.get("SNOWFLAKE_API_INTEGRATION", "GITHUB_API_INTEGRATION")
-GIT_REPO_NAME = os.environ.get("SNOWFLAKE_GIT_REPO", "DBT_PROJECT_FACTORY_REPO")
+GIT_REPO_NAME = os.environ.get("SNOWFLAKE_GIT_REPO", "DATAGENIX_REPO")
 FQ_GIT_REPO = f"{DATABASE}.{SCHEMA}.{GIT_REPO_NAME}"
 
 

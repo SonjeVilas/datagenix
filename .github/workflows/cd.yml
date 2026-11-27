@@ -1,5 +1,5 @@
 # ──────────────────────────────────────────────────────────────────────
-# CD Pipeline – dbt Project Factory
+# CD Pipeline – Datagenix
 # Runs ONLY after code is merged into 'main'.
 # Deploys to Snowflake using native Git integration & dbt Projects.
 # ──────────────────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ jobs:
           SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
           SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
           SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
-          GITHUB_REPO_URL: "https://github.com/SonjeVilas/dbt-project-factory.git"
+          GITHUB_REPO_URL: "https://github.com/SonjeVilas/datagenix.git"
         run: python scripts/snowflake_deploy.py
 
       - name: Upload deployment logs

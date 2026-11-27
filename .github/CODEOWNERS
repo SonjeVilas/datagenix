@@ -1,6 +1,7 @@
 # ──────────────────────────────────────────────────────────────────────
-# CODEOWNERS – dbt Project Factory
-# All changes require approval from @SonjeVilas before merging.
+# CODEOWNERS – Datagenix
+# Changes require review from project maintainers before merging.
+# Add collaborator GitHub handles (e.g., * @SonjeVilas @friend-username)
 # ──────────────────────────────────────────────────────────────────────
 
 * @SonjeVilas

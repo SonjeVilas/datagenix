@@ -1,7 +1,9 @@
 # ──────────────────────────────────────────────────────────────────────
-# CI Pipeline – dbt Project Factory
-# Runs on every PR targeting 'main' that touches any dbt project.
-# Validates SQL, compiles the project, and runs dbt build.
+# CI Pipeline – Datagenix
+# Runs on every PR targeting 'main' and pushes to 'main'.
+# 1. Runs Python unit tests (pytest)
+# 2. Lints SQL models with SQLFluff
+# 3. Validates & builds dbt projects (uses offline parse on fork PRs)
 # ──────────────────────────────────────────────────────────────────────
 
 name: "CI – dbt PR Validation"
@@ -9,9 +11,8 @@ name: "CI – dbt PR Validation"
 on:
   pull_request:
     branches: [main]
-    paths:
-      - "generated_projects/**"
-      - ".github/workflows/ci.yml"
+  push:
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.head_ref || github.ref }}
@@ -22,6 +23,26 @@ env:
   DBT_VERSION: "1.12.*"
 
 jobs:
+  # ── Job 0: Python Unit Tests ────────────────────────────────────────
+  python-tests:
+    name: "🐍 Python Tests (pytest)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pytest
+        run: pytest tests/ -v
+
   # ── Job 1: SQL Linting ──────────────────────────────────────────────
   lint-sql:
     name: "🔍 SQLFluff Lint"
@@ -41,9 +62,13 @@ jobs:
       - name: Run SQLFluff across projects
         run: |
           python - << 'EOF'
-          import os, subprocess, yaml
+          import os, subprocess, textwrap, yaml
 
           base = "generated_projects"
+          if not os.path.isdir(base):
+              print("No generated_projects directory found; skipping SQLFluff.")
+              raise SystemExit(0)
+
           for item in sorted(os.listdir(base)):
               proj_dir = os.path.join(base, item)
               if os.path.isdir(proj_dir) and os.path.exists(os.path.join(proj_dir, "dbt_project.yml")):
@@ -53,23 +78,23 @@ jobs:
                   profile = cfg.get("profile", item)
 
                   # Generate dummy profiles.yml for templater
-                  dummy_profile = f"""
-          {profile}:
-            target: ci
-            outputs:
-              ci:
-                type: snowflake
-                account: dummy
-                user: dummy
-                password: dummy
-                role: ACCOUNTADMIN
-                database: ECOM_DB
-                warehouse: COMPUTE_WH
-                schema: RAW
-                threads: 4
-          """
+                  dummy_profile = textwrap.dedent(f"""
+                      {profile}:
+                        target: ci
+                        outputs:
+                          ci:
+                            type: snowflake
+                            account: dummy
+                            user: dummy
+                            password: dummy
+                            role: ACCOUNTADMIN
+                            database: ECOM_DB
+                            warehouse: COMPUTE_WH
+                            schema: RAW
+                            threads: 4
+                  """).lstrip()
                   with open(os.path.join(proj_dir, "profiles.yml"), "w") as pf:
-                      pf.write(dummy_profile.strip())
+                      pf.write(dummy_profile)
 
                   models_dir = os.path.join(proj_dir, "models")
                   if os.path.isdir(models_dir):
@@ -102,31 +127,36 @@ jobs:
 
       - name: Mask credentials
         run: |
-          echo "::add-mask::${{ secrets.SNOWFLAKE_ACCOUNT }}"
-          echo "::add-mask::${{ secrets.SNOWFLAKE_USER }}"
-          echo "::add-mask::${{ secrets.SNOWFLAKE_PASSWORD }}"
+          if [ -n "${{ secrets.SNOWFLAKE_ACCOUNT }}" ]; then echo "::add-mask::${{ secrets.SNOWFLAKE_ACCOUNT }}"; fi
+          if [ -n "${{ secrets.SNOWFLAKE_USER }}" ]; then echo "::add-mask::${{ secrets.SNOWFLAKE_USER }}"; fi
+          if [ -n "${{ secrets.SNOWFLAKE_PASSWORD }}" ]; then echo "::add-mask::${{ secrets.SNOWFLAKE_PASSWORD }}"; fi
 
       - name: Validate, Compile, and Build dbt projects
         run: |
           python - << 'EOF'
-          import os, sys, subprocess, yaml
+          import os, sys, subprocess, textwrap, yaml
 
-          account = os.environ.get("DBT_SNOWFLAKE_ACCOUNT", "")
-          user = os.environ.get("DBT_SNOWFLAKE_USER", "")
-          password = os.environ.get("DBT_SNOWFLAKE_PASSWORD", "")
-          role = os.environ.get("DBT_SNOWFLAKE_ROLE", "ACCOUNTADMIN")
-          warehouse = os.environ.get("DBT_SNOWFLAKE_WAREHOUSE", "COMPUTE_WH")
+          account = os.environ.get("DBT_SNOWFLAKE_ACCOUNT", "").strip()
+          user = os.environ.get("DBT_SNOWFLAKE_USER", "").strip()
+          password = os.environ.get("DBT_SNOWFLAKE_PASSWORD", "").strip()
+          role = os.environ.get("DBT_SNOWFLAKE_ROLE", "").strip() or "ACCOUNTADMIN"
+          warehouse = os.environ.get("DBT_SNOWFLAKE_WAREHOUSE", "").strip() or "COMPUTE_WH"
+
+          has_snowflake_secrets = bool(account and user and password)
 
           base = "generated_projects"
-          projects = [
-              d for d in sorted(os.listdir(base))
-              if os.path.isdir(os.path.join(base, d))
-              and os.path.exists(os.path.join(base, d, "dbt_project.yml"))
-          ]
+          projects = []
+          if os.path.isdir(base):
+              projects = [
+                  d for d in sorted(os.listdir(base))
+                  if os.path.isdir(os.path.join(base, d))
+                  and os.path.exists(os.path.join(base, d, "dbt_project.yml"))
+              ]
 
           print(f"Discovered dbt projects: {projects}")
+          print(f"Snowflake secrets available: {has_snowflake_secrets}")
 
-          summary_lines = ["## 🏗️ dbt CI Build Results\n"]
+          summary_lines = ["## 🏗️ dbt CI Validation Results\n"]
 
           for item in projects:
               proj_dir = os.path.join(base, item)
@@ -136,35 +166,42 @@ jobs:
                   cfg = yaml.safe_load(f)
               profile = cfg.get("profile", item)
 
-              # Write dynamic CI profile
-              ci_profile = f"""
-          {profile}:
-            target: ci
-            outputs:
-              ci:
-                type: snowflake
-                account: "{account}"
-                user: "{user}"
-                password: "{password}"
-                role: "{role}"
-                database: ECOM_DB
-                warehouse: "{warehouse}"
-                schema: RAW
-                threads: 4
-          """
+              ci_profile = textwrap.dedent(f"""
+                  {profile}:
+                    target: ci
+                    outputs:
+                      ci:
+                        type: snowflake
+                        account: "{account or 'dummy'}"
+                        user: "{user or 'dummy'}"
+                        password: "{password or 'dummy'}"
+                        role: "{role}"
+                        database: ECOM_DB
+                        warehouse: "{warehouse}"
+                        schema: RAW
+                        threads: 4
+              """).lstrip()
               with open(os.path.join(proj_dir, "profiles.yml"), "w") as pf:
-                  pf.write(ci_profile.strip())
+                  pf.write(ci_profile)
 
               # 1. dbt deps
               print(f"📦 [{item}] running dbt deps...")
               res_deps = subprocess.run(["dbt", "deps", "--profiles-dir", "."], cwd=proj_dir)
+              if res_deps.returncode != 0:
+                  print(f"❌ [{item}] dbt deps failed!")
+                  sys.exit(res_deps.returncode)
 
-              # 2. dbt parse
+              # 2. dbt parse (always runs — validates manifest, refs, macros offline)
               print(f"🔍 [{item}] running dbt parse...")
               res_parse = subprocess.run(["dbt", "parse", "--profiles-dir", "."], cwd=proj_dir)
               if res_parse.returncode != 0:
                   print(f"❌ [{item}] dbt parse failed!")
                   sys.exit(res_parse.returncode)
+
+              if not has_snowflake_secrets:
+                  print(f"ℹ️ [{item}] Snowflake secrets unavailable (e.g., fork PR). Skipping live compile/build.")
+                  summary_lines.append(f"✅ **{item}**: offline `dbt parse` passed (live Snowflake build skipped on fork)")
+                  continue
 
               # 3. dbt compile
               print(f"⚙️ [{item}] running dbt compile...")
@@ -189,7 +226,7 @@ jobs:
               with open(summary_file, "a") as sf:
                   sf.write("\n".join(summary_lines) + "\n")
 
-          print("\n🎉 All projects validated and built successfully!")
+          print("\n🎉 All projects validated successfully!")
           EOF
 
       - name: Upload dbt artifacts

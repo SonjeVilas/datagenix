@@ -1,1 +1,1 @@
-# Frontend package for dbt Project Factory
+# Frontend package for Datagenix

@@ -15,7 +15,7 @@ DEFAULT_DB_PATH = Path("storage/project_history.db")
 
 
 class Database:
-    """SQLite database manager for dbt Project Factory."""
+    """SQLite database manager for Datagenix."""
 
     def __init__(self, db_path: Optional[Path | str] = None) -> None:
         self.db_path = Path(db_path or DEFAULT_DB_PATH).resolve()

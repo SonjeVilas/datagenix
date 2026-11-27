@@ -1,4 +1,4 @@
-"""Main application dashboard and multi-page router for dbt Project Factory."""
+"""Main application dashboard and multi-page router for Datagenix."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ def _init_global_state() -> None:
 
 def render_dashboard_home(db: Database) -> None:
     """Render the executive overview dashboard."""
-    st.markdown("## 🏭 dbt Project Factory")
+    st.markdown("## 🏭 Datagenix")
     st.markdown(
         "Autonomous multi-agent data engineering platform powered by **Google Gemini** "
         "and **LangGraph**. Converts natural-language requirements into production-grade dbt projects."
@@ -133,7 +133,7 @@ def render_dashboard_home(db: Database) -> None:
 def main() -> None:
     """Streamlit entry point."""
     st.set_page_config(
-        page_title="dbt Project Factory",
+        page_title="Datagenix",
         page_icon="🏭",
         layout="wide",
         initial_sidebar_state="expanded",
@@ -161,7 +161,7 @@ def main() -> None:
         st.session_state["nav_selection"] = pages[0]
 
     with st.sidebar:
-        st.markdown("### 🏭 dbt Project Factory")
+        st.markdown("### 🏭 Datagenix")
         st.caption("v1.0.0 • Multi-Agent AI Platform")
         st.markdown("---")
 

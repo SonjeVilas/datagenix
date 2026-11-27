@@ -1,5 +1,5 @@
 """
-Business Logic Agent for dbt Project Factory.
+Business Logic Agent for Datagenix.
 
 Converts high-level business requirements into concrete SQL transformation
 rules: joins, aggregations, filters, calculations, deduplication, NULL

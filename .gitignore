@@ -17,23 +17,23 @@ ENV/
 
 # ── Environment / secrets ──────────────────────────────────────────────
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
 
 # ── Generated output ───────────────────────────────────────────────────
 generated_projects/*
 !generated_projects/.gitkeep
 !generated_projects/retail_dbt_v1/
-# Never commit profiles with real credentials
-generated_projects/retail_dbt_v1/profiles.yml
-generated_projects/retail_dbt_v1/logs/
-generated_projects/retail_dbt_v1/target/
-generated_projects/retail_dbt_v1/.user.yml
 !generated_projects/retail_analytics_v2/
-generated_projects/retail_analytics_v2/profiles.yml
-generated_projects/retail_analytics_v2/logs/
-generated_projects/retail_analytics_v2/target/
-generated_projects/retail_analytics_v2/.user.yml
+
+# Never commit real dbt profiles with credentials, artifacts, logs, or zips
+generated_projects/*/profiles.yml
+generated_projects/*/logs/
+generated_projects/*/target/
+generated_projects/*/.user.yml
+generated_projects/*.zip
+
+# Local SQLite database & runtime logs
 storage/*
 !storage/.gitkeep
 logs/*
@@ -61,3 +61,4 @@ coverage.xml
 *.log
 *.bak
 *.tmp
+deploy_results.json

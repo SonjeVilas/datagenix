@@ -1,4 +1,4 @@
-"""Configuration package for the dbt Project Factory."""
+"""Configuration package for Datagenix."""
 
 from config.settings import Settings, get_settings
 

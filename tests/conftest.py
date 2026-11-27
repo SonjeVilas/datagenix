@@ -1,5 +1,5 @@
 """
-Shared pytest fixtures for the dbt Project Factory test suite.
+Shared pytest fixtures for the Datagenix test suite.
 All tests run WITHOUT real API keys or external connections.
 """
 import json
